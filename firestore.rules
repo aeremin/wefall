@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function optNumber(v) {
+      return v == null || (v is number && v >= 0);
+    }
+
+    function boundedString(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    function validJump(d) {
+      return d.keys().hasOnly([
+          'jumpNumber', 'date', 'dropzone', 'aircraft', 'jumpType',
+          'exitAltitude', 'deploymentAltitude', 'freefallTime',
+          'canopy', 'notes', 'createdAt', 'updatedAt'
+        ])
+        && d.jumpNumber is int && d.jumpNumber > 0
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && boundedString(d.dropzone, 200)
+        && boundedString(d.aircraft, 200)
+        && boundedString(d.jumpType, 100)
+        && boundedString(d.canopy, 200)
+        && boundedString(d.notes, 10000)
+        && optNumber(d.exitAltitude)
+        && optNumber(d.deploymentAltitude)
+        && optNumber(d.freefallTime);
+    }
+
+    match /users/{userId}/jumps/{jumpId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validJump(request.resource.data);
+    }
+  }
+}
