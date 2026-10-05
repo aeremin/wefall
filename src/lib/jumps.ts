@@ -64,3 +64,27 @@ export async function importJumps(
     onProgress?.(Math.min(i + BATCH_SIZE, jumps.length));
   }
 }
+
+/** Jumps with an `id` overwrite that existing document; the rest are created. */
+export async function reimportJumps(
+  uid: string,
+  jumps: (JumpInput & { id?: string })[],
+  onProgress?: (done: number) => void,
+) {
+  for (let i = 0; i < jumps.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    for (const { id, ...jump } of jumps.slice(i, i + BATCH_SIZE)) {
+      if (id) {
+        batch.update(doc(jumpsCollection(uid), id), { ...jump, updatedAt: serverTimestamp() });
+      } else {
+        batch.set(doc(jumpsCollection(uid)), {
+          ...jump,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+    await batch.commit();
+    onProgress?.(Math.min(i + BATCH_SIZE, jumps.length));
+  }
+}
