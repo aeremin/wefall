@@ -12,17 +12,21 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 
 ## Setup
 
+The app is wired to the `wefall` Firebase project; its web config is inlined in
+`src/lib/firebase.ts` (these values are public by design). To use a different project:
+
 1. Create a project in the [Firebase console](https://console.firebase.google.com/).
 2. **Authentication** → Sign-in method: enable **Email/Password** and **Google**.
 3. **Firestore Database** → Create database (production mode).
-4. **Project settings** → Your apps → add a **Web app** and copy its config.
-5. Copy `.env.example` to `.env.local` and fill in the values.
-6. Install and run:
+4. **Project settings** → Your apps → add a **Web app** and paste its config into `src/lib/firebase.ts`.
+5. Update the project ID in `.firebaserc` and `.github/workflows/`.
 
-   ```sh
-   npm install
-   npm run dev
-   ```
+Install and run:
+
+```sh
+npm install
+npm run dev
+```
 
 ## Deploying rules and hosting
 

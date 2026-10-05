@@ -7,12 +7,12 @@ import {
 } from 'firebase/firestore';
 
 const app = initializeApp({
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: 'AIzaSyD-ogo4QlCC-cT57SPTaA0Qo2LE7Xqg6_I',
+  authDomain: 'wefall.firebaseapp.com',
+  projectId: 'wefall',
+  storageBucket: 'wefall.firebasestorage.app',
+  messagingSenderId: '427384930810',
+  appId: '1:427384930810:web:0bc3b6ee8a86388cb32443',
 });
 
 export const auth = getAuth(app);
