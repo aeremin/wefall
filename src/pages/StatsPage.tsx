@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   Bar,
@@ -37,22 +37,6 @@ function computeStats(jumps: Jump[]) {
   const currentYear = String(new Date().getFullYear());
   const exits = jumps.map((j) => j.exitAltitude).filter((a): a is number => a != null);
 
-  const now = new Date();
-  const last12Months = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    return {
-      key,
-      month: d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-      jumps: 0,
-    };
-  });
-  const monthIndex = new Map(last12Months.map((m, i) => [m.key, i]));
-  for (const j of jumps) {
-    const idx = monthIndex.get(j.date.slice(0, 7));
-    if (idx != null) last12Months[idx].jumps++;
-  }
-
   const byYear = countBy(jumps, (j) => j.date.slice(0, 4))
     .map(({ name, value }) => ({ year: name, jumps: value }))
     .sort((a, b) => a.year.localeCompare(b.year));
@@ -70,7 +54,6 @@ function computeStats(jumps: Jump[]) {
     thisYear: jumps.filter((j) => j.date.startsWith(currentYear)).length,
     last90Days: jumps.filter((j) => daysSince(j.date) <= 90).length,
     highestExit: exits.length ? Math.max(...exits) : null,
-    last12Months,
     byYear,
     typeData,
     topDropzones: countBy(jumps.filter((j) => j.dropzone), (j) => j.dropzone).slice(0, 5),
@@ -79,9 +62,25 @@ function computeStats(jumps: Jump[]) {
   };
 }
 
+function monthlyJumps(jumps: Jump[], year: string) {
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    month: new Date(Number(year), i, 1).toLocaleDateString(undefined, { month: 'short' }),
+    jumps: 0,
+  }));
+  for (const j of jumps) {
+    if (j.date.startsWith(year)) months[Number(j.date.slice(5, 7)) - 1].jumps++;
+  }
+  return months;
+}
+
 export default function StatsPage() {
   const { jumps, loading } = useJumps();
   const stats = useMemo(() => computeStats(jumps), [jumps]);
+  const years = stats.byYear.map((y) => y.year);
+  const [pickedYear, setPickedYear] = useState<string | null>(null);
+  const overviewYear = pickedYear != null && years.includes(pickedYear) ? pickedYear : years[years.length - 1];
+  const yearOverview = useMemo(() => (overviewYear ? monthlyJumps(jumps, overviewYear) : []), [jumps, overviewYear]);
+  const yearIdx = years.indexOf(overviewYear);
 
   if (loading) return <Spinner />;
 
@@ -119,8 +118,42 @@ export default function StatsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Last 12 months">
-          <BarChart data={stats.last12Months}>
+        <ChartCard
+          title="Year overview"
+          action={
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="btn btn-secondary px-2 py-1"
+                aria-label="Previous year"
+                disabled={yearIdx <= 0}
+                onClick={() => setPickedYear(years[yearIdx - 1])}
+              >
+                ‹
+              </button>
+              <select
+                className="input w-auto py-1"
+                aria-label="Year"
+                value={overviewYear}
+                onChange={(e) => setPickedYear(e.target.value)}
+              >
+                {[...years].reverse().map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-secondary px-2 py-1"
+                aria-label="Next year"
+                disabled={yearIdx >= years.length - 1}
+                onClick={() => setPickedYear(years[yearIdx + 1])}
+              >
+                ›
+              </button>
+            </div>
+          }
+        >
+          <BarChart data={yearOverview}>
             <XAxis dataKey="month" fontSize={12} />
             <YAxis allowDecimals={false} fontSize={12} width={32} />
             <Tooltip />
@@ -166,10 +199,13 @@ function StatCard({ label, value, sub, warn }: { label: string; value: string; s
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactElement }) {
+function ChartCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactElement }) {
   return (
     <div className="card">
-      <h2 className="mb-3 font-semibold">{title}</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">{title}</h2>
+        {action}
+      </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
       </div>
