@@ -13,7 +13,7 @@ import {
   type ColumnMapping,
   type DateFormat,
 } from '../lib/csv';
-import { importJumps } from '../lib/jumps';
+import { importJumps, reimportJumps } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
 
 interface ParsedFile {
@@ -33,6 +33,7 @@ export default function ImportPage() {
   const [altitudeUnit, setAltitudeUnit] = useState<AltitudeUnit>('m');
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [total, setTotal] = useState(0);
 
   const existingNumbers = useMemo(() => new Set(jumps.map((j) => j.jumpNumber)), [jumps]);
 
@@ -43,6 +44,20 @@ export default function ImportPage() {
   const ready = results.filter((r) => r.jump && !r.duplicate);
   const duplicates = results.filter((r) => r.duplicate).length;
   const errors = results.filter((r) => r.error);
+
+  const existingIds = useMemo(() => {
+    const ids = new Map<number, string>();
+    for (const j of jumps) if (!ids.has(j.jumpNumber)) ids.set(j.jumpNumber, j.id);
+    return ids;
+  }, [jumps]);
+  const reimport = useMemo(
+    () =>
+      (file ? convertRows(file.rows, mapping, { dateFormat, altitudeUnit, existingNumbers: new Set() }) : [])
+        .filter((r) => r.jump && !r.duplicate)
+        .map((r) => ({ ...r.jump!, id: existingIds.get(r.jump!.jumpNumber) })),
+    [file, mapping, dateFormat, altitudeUnit, existingIds],
+  );
+  const overwriteCount = reimport.filter((j) => j.id).length;
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -62,16 +77,33 @@ export default function ImportPage() {
     }
   }
 
-  async function handleImport() {
+  async function run(count: number, write: () => Promise<void>) {
     setError(null);
+    setTotal(count);
     setProgress(0);
     try {
-      await importJumps(user.uid, ready.map((r) => r.jump!), setProgress);
+      await write();
       navigate('/');
     } catch (err) {
       setError(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
       setProgress(null);
     }
+  }
+
+  function handleImport() {
+    return run(ready.length, () => importJumps(user.uid, ready.map((r) => r.jump!), setProgress));
+  }
+
+  function handleReimport() {
+    const added = reimport.length - overwriteCount;
+    const message =
+      `Re-import ${reimport.length} jumps from ${file!.name}?\n\n` +
+      `${overwriteCount} existing jumps with the same jump number will be OVERWRITTEN ` +
+      `with the data from the file` +
+      (added > 0 ? `, and ${added} new jumps will be added.` : '.') +
+      `\n\nThis cannot be undone.`;
+    if (!confirm(message)) return;
+    return run(reimport.length, () => reimportJumps(user.uid, reimport, setProgress));
   }
 
   const importing = progress != null;
@@ -183,9 +215,23 @@ export default function ImportPage() {
               </div>
             )}
 
-            <button className="btn btn-primary" disabled={ready.length === 0 || importing} onClick={handleImport}>
-              {importing ? `Importing… ${progress} / ${ready.length}` : `Import ${ready.length} jumps`}
-            </button>
+            {importing ? (
+              <button className="btn btn-primary" disabled>Importing… {progress} / {total}</button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <button className="btn btn-primary" disabled={ready.length === 0} onClick={handleImport}>
+                  Import {ready.length} jumps
+                </button>
+                <button
+                  className="btn btn-danger"
+                  disabled={overwriteCount === 0}
+                  onClick={handleReimport}
+                  title="Import all jumps from the file, overwriting existing jumps with the same jump number"
+                >
+                  Re-import and overwrite {overwriteCount} existing jumps
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
