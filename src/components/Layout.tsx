@@ -18,7 +18,7 @@ export default function Layout() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2 text-lg font-bold text-sky-700">
             <img src="/favicon.svg" alt="" className="h-7 w-7" />
-            Skybook
+            WeFall
           </NavLink>
           <nav className="flex gap-1">
             {navItems.map((item) => (

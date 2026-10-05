@@ -34,7 +34,7 @@ export default function JumpsPage() {
           {jumps.length > 0 && (
             <button
               className="btn btn-secondary"
-              onClick={() => downloadCsv(`skybook-${todayIso()}.csv`, jumpsToCsv(jumps))}
+              onClick={() => downloadCsv(`wefall-${todayIso()}.csv`, jumpsToCsv(jumps))}
             >
               Export CSV
             </button>

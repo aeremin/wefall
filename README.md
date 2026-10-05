@@ -1,4 +1,4 @@
-# Skybook
+# WeFall
 
 A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS and Firebase
 (Authentication + Cloud Firestore).

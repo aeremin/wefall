@@ -80,7 +80,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <img src="/favicon.svg" alt="" className="mx-auto h-14 w-14" />
-          <h1 className="mt-2 text-2xl font-bold text-sky-800">Skybook</h1>
+          <h1 className="mt-2 text-2xl font-bold text-sky-800">WeFall</h1>
           <p className="text-sm text-slate-600">Your skydiving logbook</p>
         </div>
 
