@@ -7,6 +7,7 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - New jumps are prefilled from your last jump; dropzone/aircraft/canopy autocomplete from history
 - Stats dashboard: totals, freefall time, days since last jump, charts by month/year/type, top dropzones
 - CSV import with automatic column matching (feet are converted to meters) and CSV export
+- ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, altitudes and freefall time
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Works offline: jumps logged without reception sync when you're back online
 
