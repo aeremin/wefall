@@ -16,6 +16,16 @@ export function formatDate(iso: string) {
   });
 }
 
+/** Parses "H:MM", "HH:MM:SS" or "HHMMSS" into HH:MM:SS; returns null if not a valid time of day. */
+export function parseTime(raw: string): string | null {
+  const s = raw.trim();
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s) ?? /^(\d{2})(\d{2})(\d{2})$/.exec(s);
+  if (!match) return null;
+  const [h, m, sec] = [match[1], match[2], match[3] ?? '0'].map(Number);
+  if (h > 23 || m > 59 || sec > 59) return null;
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
 export function daysSince(iso: string) {
   const [y, m, d] = iso.split('-').map(Number);
   const then = new Date(y, m - 1, d).getTime();

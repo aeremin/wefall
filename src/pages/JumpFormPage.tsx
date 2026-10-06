@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
 import { addJump, deleteJump, updateJump } from '../lib/jumps';
-import { todayIso } from '../lib/format';
+import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
 
 interface FormValues {
   jumpNumber: string;
   date: string;
+  time: string;
   dropzone: string;
   aircraft: string;
   jumpType: string;
@@ -37,6 +38,7 @@ function toJumpInput(v: FormValues): JumpInput {
   return {
     jumpNumber: Number(v.jumpNumber),
     date: v.date,
+    time: parseTime(v.time) ?? '',
     dropzone: v.dropzone.trim(),
     aircraft: v.aircraft.trim(),
     jumpType: v.jumpType.trim(),
@@ -53,6 +55,7 @@ function defaultsFromLastJump(jumps: Jump[]): FormValues {
   return {
     jumpNumber: String((last?.jumpNumber ?? 0) + 1),
     date: todayIso(),
+    time: '',
     dropzone: last?.dropzone ?? '',
     aircraft: last?.aircraft ?? '',
     jumpType: last?.jumpType ?? '',
@@ -155,6 +158,9 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
         </Field>
         <Field label="Date" id="date">
           <input id="date" type="date" required className="input" value={values.date} onChange={set('date')} />
+        </Field>
+        <Field label="Time (optional)" id="time">
+          <input id="time" type="time" step={1} className="input" value={values.time} onChange={set('time')} />
         </Field>
         <Field label="Dropzone" id="dropzone">
           <input id="dropzone" list="dropzone-list" className="input" value={values.dropzone} onChange={set('dropzone')} />

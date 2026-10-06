@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { pad } from './format';
+import { pad, parseTime } from './format';
 import type { Jump, JumpInput } from './types';
 
 export type ImportField = keyof JumpInput;
@@ -10,6 +10,7 @@ export type ColumnMapping = Partial<Record<ImportField, string>>;
 export const IMPORT_FIELDS: { field: ImportField; label: string; required?: boolean }[] = [
   { field: 'jumpNumber', label: 'Jump number', required: true },
   { field: 'date', label: 'Date', required: true },
+  { field: 'time', label: 'Time' },
   { field: 'dropzone', label: 'Dropzone' },
   { field: 'aircraft', label: 'Aircraft' },
   { field: 'jumpType', label: 'Jump type' },
@@ -23,6 +24,7 @@ export const IMPORT_FIELDS: { field: ImportField; label: string; required?: bool
 const FIELD_SYNONYMS: Record<ImportField, string[]> = {
   jumpNumber: ['jump number', 'jump #', 'jump no', 'jump nr', 'number', 'jump', '#', 'no', 'nr'],
   date: ['date', 'jump date'],
+  time: ['time', 'jump time', 'exit time'],
   dropzone: ['dropzone', 'drop zone', 'dz', 'location', 'place'],
   aircraft: ['aircraft', 'plane', 'airplane'],
   jumpType: ['jump type', 'type', 'discipline'],
@@ -44,6 +46,7 @@ const FIELD_SYNONYMS: Record<ImportField, string[]> = {
 const EXPORT_HEADERS: Record<ImportField, string> = {
   jumpNumber: 'Jump number',
   date: 'Date',
+  time: 'Time',
   dropzone: 'Dropzone',
   aircraft: 'Aircraft',
   jumpType: 'Jump type',
@@ -193,6 +196,7 @@ export function convertRows(
     const jump: JumpInput = {
       jumpNumber,
       date,
+      time: parseTime(get(row, 'time')) ?? '',
       dropzone: get(row, 'dropzone').slice(0, 200),
       aircraft: get(row, 'aircraft').slice(0, 200),
       jumpType: get(row, 'jumpType').slice(0, 100),

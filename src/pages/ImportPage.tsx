@@ -236,7 +236,7 @@ export default function ImportPage() {
           <div>
             <h2 className="font-semibold">Jump details</h2>
             <p className="text-sm text-slate-500">
-              ProTrack records the jump number, date, altitudes and freefall time. Anything entered
+              ProTrack records the jump number, date, time, altitudes and freefall time. Anything entered
               here is applied to all imported jumps. When re-importing, existing jumps keep their
               current values for fields left empty.
             </p>
@@ -298,7 +298,7 @@ export default function ImportPage() {
                   {ready.slice(0, 10).map(({ line, jump }) => (
                     <tr key={line} className="border-b border-slate-100">
                       <td className="py-1 pr-3 font-medium">{jump!.jumpNumber}</td>
-                      <td className="whitespace-nowrap py-1 pr-3">{formatDate(jump!.date)}</td>
+                      <td className="whitespace-nowrap py-1 pr-3">{formatDate(jump!.date)} {jump!.time}</td>
                       <td className="py-1 pr-3">{jump!.dropzone}</td>
                       <td className="py-1 pr-3">{jump!.aircraft}</td>
                       <td className="py-1 pr-3">{jump!.jumpType}</td>
