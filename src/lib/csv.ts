@@ -149,17 +149,29 @@ export function parseSeconds(raw: string): number | null {
 
 export interface ImportRow {
   line: number;
+  /** Where the row came from, shown in error messages; defaults to the line number. */
+  source?: string;
   jump?: JumpInput;
   error?: string;
   duplicate?: boolean;
 }
 
+/** Flags rows whose jump number is in `existingNumbers` or appeared on an earlier row. */
+export function markDuplicates(rows: ImportRow[], existingNumbers: Set<number>): ImportRow[] {
+  const seen = new Set(existingNumbers);
+  return rows.map((row) => {
+    if (!row.jump) return row;
+    if (seen.has(row.jump.jumpNumber)) return { ...row, duplicate: true };
+    seen.add(row.jump.jumpNumber);
+    return row;
+  });
+}
+
 export function convertRows(
   rows: Record<string, string>[],
   mapping: ColumnMapping,
-  options: { dateFormat: DateFormat; altitudeUnit: AltitudeUnit; existingNumbers: Set<number> },
+  options: { dateFormat: DateFormat; altitudeUnit: AltitudeUnit },
 ): ImportRow[] {
-  const seen = new Set(options.existingNumbers);
   const get = (row: Record<string, string>, field: ImportField) =>
     mapping[field] ? (row[mapping[field]!] ?? '').trim() : '';
   const altitude = (raw: string) => {
@@ -190,8 +202,6 @@ export function convertRows(
       canopy: get(row, 'canopy').slice(0, 200),
       notes: get(row, 'notes').slice(0, 10000),
     };
-    if (seen.has(jumpNumber)) return { line, jump, duplicate: true };
-    seen.add(jumpNumber);
     return { line, jump };
   });
 }
