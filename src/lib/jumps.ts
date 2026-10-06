@@ -23,7 +23,7 @@ export function subscribeJumps(
   const q = query(jumpsCollection(uid), orderBy('jumpNumber', 'desc'));
   return onSnapshot(
     q,
-    (snap) => onData(snap.docs.map((d) => ({ ...(d.data() as JumpInput), id: d.id }))),
+    (snap) => onData(snap.docs.map((d) => ({ ...(d.data() as JumpInput), time: d.get('time') ?? '', id: d.id }))),
     onError,
   );
 }

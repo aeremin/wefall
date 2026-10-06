@@ -3,11 +3,11 @@
 A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS and Firebase
 (Authentication + Cloud Firestore).
 
-- Log jumps: number, date, dropzone, aircraft, jump type, exit/deployment altitude (m), freefall time, canopy, notes
+- Log jumps: number, date, time (optional), dropzone, aircraft, jump type, exit/deployment altitude (m), freefall time, canopy, notes
 - New jumps are prefilled from your last jump; dropzone/aircraft/canopy autocomplete from history
 - Stats dashboard: totals, freefall time, days since last jump, charts by month/year/type, top dropzones
 - CSV import with automatic column matching (feet are converted to meters) and CSV export
-- ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, altitudes and freefall time
+- ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, time, altitudes and freefall time
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Works offline: jumps logged without reception sync when you're back online
 
@@ -46,7 +46,7 @@ When deploying to a custom domain, add it under Authentication → Settings → 
 
 ```
 users/{uid}/jumps/{jumpId}
-  jumpNumber, date (YYYY-MM-DD), dropzone, aircraft, jumpType,
+  jumpNumber, date (YYYY-MM-DD), time (HH:MM:SS or empty), dropzone, aircraft, jumpType,
   exitAltitude (m), deploymentAltitude (m), freefallTime (s),
   canopy, notes, createdAt, updatedAt
 ```

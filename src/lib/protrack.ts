@@ -1,3 +1,4 @@
+import { parseTime } from './format';
 import type { JumpInput } from './types';
 
 /** Fields of the JIB (Jump Information) block, in file order. */
@@ -16,7 +17,7 @@ const JIB_FIELDS = [
 
 export type ProTrackJump = Pick<
   JumpInput,
-  'jumpNumber' | 'date' | 'exitAltitude' | 'deploymentAltitude' | 'freefallTime'
+  'jumpNumber' | 'date' | 'time' | 'exitAltitude' | 'deploymentAltitude' | 'freefallTime'
 >;
 
 function contentLines(text: string) {
@@ -60,6 +61,7 @@ export function parseProTrackFile(text: string): ProTrackJump {
   return {
     jumpNumber,
     date: `${d[1]}-${d[2]}-${d[3]}`,
+    time: parseTime(raw.time) ?? '',
     exitAltitude: parseInteger(raw.exitAltitude),
     deploymentAltitude: parseInteger(raw.deploymentAltitude),
     freefallTime: parseInteger(raw.freefallTime),

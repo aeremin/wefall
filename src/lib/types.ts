@@ -2,6 +2,8 @@ export interface JumpInput {
   jumpNumber: number;
   /** ISO date, YYYY-MM-DD */
   date: string;
+  /** HH:MM:SS (24h), or empty when unknown */
+  time: string;
   dropzone: string;
   aircraft: string;
   jumpType: string;

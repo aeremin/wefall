@@ -84,7 +84,10 @@ export default function JumpsPage() {
                     onClick={() => navigate(`/jumps/${j.id}`)}
                   >
                     <td className="px-4 py-3 font-semibold">{j.jumpNumber}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatDate(j.date)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {formatDate(j.date)}
+                      {j.time && <span className="ml-2 text-xs text-slate-500">{j.time}</span>}
+                    </td>
                     <td className="px-4 py-3">{j.dropzone || '–'}</td>
                     <td className="px-4 py-3">{j.jumpType || '–'}</td>
                     <td className="hidden px-4 py-3 md:table-cell">{j.aircraft || '–'}</td>
