@@ -17,7 +17,7 @@ The app is wired to the `wefall` Firebase project; its web config is inlined in
 `src/lib/firebase.ts` (these values are public by design). To use a different project:
 
 1. Create a project in the [Firebase console](https://console.firebase.google.com/).
-2. **Authentication** → Sign-in method: enable **Email/Password** and **Google**.
+2. **Authentication** → Sign-in method: enable **Google**.
 3. **Firestore Database** → Create database (production mode).
 4. **Project settings** → Your apps → add a **Web app** and paste its config into `src/lib/firebase.ts`.
 5. Update the project ID in `.firebaserc` and `.github/workflows/`.
