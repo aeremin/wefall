@@ -12,6 +12,8 @@ import {
   where,
   writeBatch,
   type DocumentSnapshot,
+  type FirestoreError,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Jump, JumpInput, JumpSharing, SharedJump } from './types';
@@ -31,25 +33,58 @@ function toSharedJump(d: DocumentSnapshot): SharedJump {
   return { ...toJump(d), ownerUid: d.ref.parent.parent!.id, ownerName: d.get('ownerName') ?? '' };
 }
 
+const PERMISSION_RETRY_DELAYS_MS = [1000, 2000];
+
+/**
+ * With multi-tab persistence, a listener started right after a sign-in may be executed by another
+ * tab that still holds the previous user's credentials, so permission errors are retried briefly.
+ */
+function listenWithRetry(
+  listen: (onError: (error: FirestoreError) => void) => Unsubscribe,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  let attempt = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let unsubscribe: Unsubscribe = () => {};
+  const start = () => {
+    unsubscribe = listen((error) => {
+      if (error.code === 'permission-denied' && attempt < PERMISSION_RETRY_DELAYS_MS.length) {
+        timer = setTimeout(start, PERMISSION_RETRY_DELAYS_MS[attempt++]);
+      } else {
+        onError(error);
+      }
+    });
+  };
+  start();
+  return () => {
+    clearTimeout(timer);
+    unsubscribe();
+  };
+}
+
 export function subscribeJumps(
   uid: string,
   onData: (jumps: Jump[]) => void,
   onError: (error: Error) => void,
 ) {
   const q = query(jumpsCollection(uid), orderBy('jumpNumber', 'desc'));
-  return onSnapshot(q, (snap) => onData(snap.docs.map(toJump)), onError);
+  return listenWithRetry((handleError) => onSnapshot(q, (snap) => onData(snap.docs.map(toJump)), handleError), onError);
 }
 
-/** Resolves to null when the jump doesn't exist (or is hidden by the offline cache). */
+/** Emits null when the jump doesn't exist. */
 export function subscribeSharedJump(
   ownerUid: string,
   jumpId: string,
-  onData: (jump: SharedJump | null) => void,
+  onData: (jump: SharedJump | null, fromCache: boolean) => void,
   onError: (error: Error) => void,
 ) {
-  return onSnapshot(
-    doc(jumpsCollection(ownerUid), jumpId),
-    (d) => onData(d.exists() ? toSharedJump(d) : null),
+  return listenWithRetry(
+    (handleError) =>
+      onSnapshot(
+        doc(jumpsCollection(ownerUid), jumpId),
+        (d) => onData(d.exists() ? toSharedJump(d) : null, d.metadata.fromCache),
+        handleError,
+      ),
     onError,
   );
 }
@@ -62,13 +97,17 @@ export function subscribeJumpsSharedWith(
 ) {
   // Sorted client-side: ordering in the query would need a composite collection-group index.
   const q = query(collectionGroup(db, 'jumps'), where('participants', 'array-contains', normalizeEmail(email)));
-  return onSnapshot(
-    q,
-    (snap) =>
-      onData(
-        snap.docs
-          .map(toSharedJump)
-          .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)),
+  return listenWithRetry(
+    (handleError) =>
+      onSnapshot(
+        q,
+        (snap) =>
+          onData(
+            snap.docs
+              .map(toSharedJump)
+              .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)),
+          ),
+        handleError,
       ),
     onError,
   );
@@ -76,6 +115,11 @@ export function subscribeJumpsSharedWith(
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+/** Mirrors the read rules in firestore.rules. */
+export function canViewJump(jump: SharedJump, viewer: { uid: string; email: string | null }) {
+  return jump.ownerUid === viewer.uid || (!!viewer.email && jump.participants.includes(normalizeEmail(viewer.email)));
 }
 
 export function sharedJumpUrl(ownerUid: string, jumpId: string) {

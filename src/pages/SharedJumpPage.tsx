@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { FirebaseError } from 'firebase/app';
 import { useCurrentUser } from '../context/AuthContext';
-import { subscribeSharedJump } from '../lib/jumps';
+import { canViewJump, subscribeSharedJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
 import type { SharedJump } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -10,29 +10,45 @@ import Spinner from '../components/Spinner';
 interface State {
   jump: SharedJump | null;
   loading: boolean;
-  error: unknown;
+  denied: boolean;
+  error: string | null;
 }
+
+const LOADING: State = { jump: null, loading: true, denied: false, error: null };
 
 export default function SharedJumpPage() {
   const { ownerUid, jumpId } = useParams() as { ownerUid: string; jumpId: string };
   const user = useCurrentUser();
-  const [state, setState] = useState<State>({ jump: null, loading: true, error: null });
+  const [state, setState] = useState<State>(LOADING);
 
   useEffect(() => {
-    setState({ jump: null, loading: true, error: null });
+    setState(LOADING);
+    const viewer = { uid: user.uid, email: user.email };
     return subscribeSharedJump(
       ownerUid,
       jumpId,
-      (jump) => setState({ jump, loading: false, error: null }),
-      (error) => setState({ jump: null, loading: false, error }),
+      (jump, fromCache) => {
+        if (jump && !canViewJump(jump, viewer)) {
+          // The offline cache and other tabs can still serve data fetched for a previously signed-in user.
+          if (!fromCache) setState({ jump: null, loading: false, denied: true, error: null });
+          return;
+        }
+        setState({ jump, loading: false, denied: false, error: null });
+      },
+      (err) =>
+        setState({
+          jump: null,
+          loading: false,
+          denied: err instanceof FirebaseError && err.code === 'permission-denied',
+          error: err.message,
+        }),
     );
-  }, [ownerUid, jumpId]);
+  }, [ownerUid, jumpId, user.uid, user.email]);
 
-  const { jump, loading, error } = state;
+  const { jump, loading, denied, error } = state;
   if (loading) return <Spinner />;
 
   if (!jump) {
-    const denied = error instanceof FirebaseError && error.code === 'permission-denied';
     return (
       <div className="card mx-auto max-w-lg space-y-2 py-8 text-center">
         {denied ? (
@@ -44,7 +60,7 @@ export default function SharedJumpPage() {
             </p>
           </>
         ) : error ? (
-          <p className="text-sm text-red-700">Could not load jump: {error instanceof Error ? error.message : String(error)}</p>
+          <p className="text-sm text-red-700">Could not load jump: {error}</p>
         ) : (
           <p className="text-lg font-medium">Jump not found</p>
         )}
