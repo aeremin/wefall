@@ -9,6 +9,9 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - CSV import with automatic column matching (feet are converted to meters) and CSV export
 - ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, time, altitudes and freefall time
 - Each user only sees their own jumps (enforced by Firestore security rules)
+- Jump sharing: add participants to a jump by email; they can open it via its direct link
+  (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
+  even without a logbook of their own
 - Works offline: jumps logged without reception sync when you're back online
 
 ## Setup
@@ -35,11 +38,12 @@ npm run dev
 npm install -g firebase-tools
 firebase login
 firebase use --add          # select your project
-firebase deploy --only firestore:rules
+firebase deploy --only firestore   # rules + indexes
 npm run deploy              # builds and deploys hosting + rules
 ```
 
 Security rules (`firestore.rules`) must be deployed before the app can read or write data.
+The **Shared** page needs the collection-group index on `participants` from `firestore.indexes.json`.
 When deploying to a custom domain, add it under Authentication → Settings → Authorized domains.
 
 ## Data model
@@ -48,5 +52,6 @@ When deploying to a custom domain, add it under Authentication → Settings → 
 users/{uid}/jumps/{jumpId}
   jumpNumber, date (YYYY-MM-DD), time (HH:MM:SS or empty), dropzone, aircraft, jumpType,
   exitAltitude (m), deploymentAltitude (m), freefallTime (s),
-  canopy, notes, createdAt, updatedAt
+  canopy, notes, createdAt, updatedAt,
+  participants (lowercased emails that may view the jump), ownerName (shown to participants)
 ```
