@@ -27,13 +27,14 @@ export default function SharedJumpPage() {
     return subscribeSharedJump(
       ownerUid,
       jumpId,
+      viewer,
       (jump, fromCache) => {
         if (jump && !canViewJump(jump, viewer)) {
           // The offline cache and other tabs can still serve data fetched for a previously signed-in user.
           if (!fromCache) setState({ jump: null, loading: false, denied: true, error: null });
           return;
         }
-        setState({ jump, loading: false, denied: false, error: null });
+        setState({ jump, loading: false, denied: !jump && ownerUid !== user.uid, error: null });
       },
       (err) =>
         setState({
