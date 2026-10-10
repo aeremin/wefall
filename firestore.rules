@@ -7,6 +7,13 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Participants are identified by their verified sign-in email.
+    function isParticipant(d) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in d.participants;
+    }
+
     function optNumber(v) {
       return v == null || (v is number && v >= 0);
     }
@@ -19,7 +26,7 @@ service cloud.firestore {
       return d.keys().hasOnly([
           'jumpNumber', 'date', 'time', 'dropzone', 'aircraft', 'jumpType',
           'exitAltitude', 'deploymentAltitude', 'freefallTime',
-          'canopy', 'notes', 'createdAt', 'updatedAt'
+          'canopy', 'notes', 'participants', 'ownerName', 'createdAt', 'updatedAt'
         ])
         && d.jumpNumber is int && d.jumpNumber > 0
         && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -32,12 +39,19 @@ service cloud.firestore {
         && boundedString(d.notes, 10000)
         && optNumber(d.exitAltitude)
         && optNumber(d.deploymentAltitude)
-        && optNumber(d.freefallTime);
+        && optNumber(d.freefallTime)
+        && (!('participants' in d) || (d.participants is list && d.participants.size() <= 50))
+        && (!('ownerName' in d) || boundedString(d.ownerName, 200));
     }
 
     match /users/{userId}/jumps/{jumpId} {
       allow read, delete: if isOwner(userId);
       allow create, update: if isOwner(userId) && validJump(request.resource.data);
+    }
+
+    // Covers both direct links (get) and the "Shared with me" collection-group query (list).
+    match /{path=**}/jumps/{jumpId} {
+      allow read: if isParticipant(resource.data);
     }
   }
 }

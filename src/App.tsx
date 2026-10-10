@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Outlet, Route, Routes } from 'react-router';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { JumpsProvider } from './context/JumpsContext';
 import Layout from './components/Layout';
@@ -8,13 +8,16 @@ import LoginPage from './pages/LoginPage';
 import JumpsPage from './pages/JumpsPage';
 import JumpFormPage from './pages/JumpFormPage';
 import ImportPage from './pages/ImportPage';
+import SharedJumpPage from './pages/SharedJumpPage';
+import SharedWithMePage from './pages/SharedWithMePage';
 
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 
 function RequireAuth() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <Spinner fullScreen />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   return (
     <JumpsProvider>
       <Outlet />
@@ -41,6 +44,8 @@ export default function App() {
               }
             />
             <Route path="import" element={<ImportPage />} />
+            <Route path="shared" element={<SharedWithMePage />} />
+            <Route path="shared/:ownerUid/:jumpId" element={<SharedJumpPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

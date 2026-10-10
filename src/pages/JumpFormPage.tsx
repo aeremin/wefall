@@ -1,8 +1,8 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
-import { addJump, deleteJump, updateJump } from '../lib/jumps';
+import { addJump, deleteJump, normalizeEmail, sharedJumpUrl, updateJump } from '../lib/jumps';
 import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -20,6 +20,9 @@ interface FormValues {
   canopy: string;
   notes: string;
 }
+
+const MAX_PARTICIPANTS = 50;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const numToStr = (n: number | null) => (n == null ? '' : String(n));
 const strToNum = (s: string) => (s.trim() === '' ? null : Number(s));
@@ -97,6 +100,10 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
   const navigate = useNavigate();
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState(jump?.participants ?? []);
+  const [participantInput, setParticipantInput] = useState('');
+  const [participantError, setParticipantError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const suggestions = useMemo(() => {
     const unique = (key: 'dropzone' | 'aircraft' | 'canopy') =>
@@ -106,6 +113,7 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
       aircraft: unique('aircraft'),
       canopy: unique('canopy'),
       jumpType: [...new Set([...JUMP_TYPES, ...jumps.map((j) => j.jumpType).filter(Boolean)])],
+      participants: [...new Set(jumps.flatMap((j) => j.participants))].sort(),
     };
   }, [jumps]);
 
@@ -114,6 +122,40 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
 
   const jumpNumber = Number(values.jumpNumber);
   const duplicate = jumps.find((j) => j.jumpNumber === jumpNumber && j.id !== jump?.id);
+
+  /** Adds the typed email; returns the updated list, or null if it is invalid. */
+  function addParticipant(): string[] | null {
+    const email = normalizeEmail(participantInput);
+    let problem: string | null = null;
+    if (!EMAIL_RE.test(email)) problem = 'Enter a valid email address.';
+    else if (email === normalizeEmail(user.email ?? '')) problem = "That's your own email; you already have access.";
+    else if (!participants.includes(email) && participants.length >= MAX_PARTICIPANTS) {
+      problem = `A jump can have at most ${MAX_PARTICIPANTS} participants.`;
+    }
+    setParticipantError(problem);
+    if (problem) return null;
+    const next = participants.includes(email) ? participants : [...participants, email];
+    setParticipants(next);
+    setParticipantInput('');
+    return next;
+  }
+
+  function handleParticipantKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    addParticipant();
+  }
+
+  function copyShareLink() {
+    if (!jump) return;
+    navigator.clipboard.writeText(sharedJumpUrl(user.uid, jump.id)).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => alert('Could not copy the link.'),
+    );
+  }
 
   function save(addAnother: boolean) {
     if (!Number.isInteger(jumpNumber) || jumpNumber <= 0) {
@@ -124,9 +166,16 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
       setError('Date is required.');
       return;
     }
+    const sharedWith = participantInput.trim() ? addParticipant() : participants;
+    if (!sharedWith) return;
     const input = toJumpInput(values);
+    const data = {
+      ...input,
+      participants: sharedWith,
+      ownerName: (user.displayName || user.email || '').slice(0, 200),
+    };
     // Not awaited: Firestore applies writes locally right away and syncs when back online.
-    const op = jump ? updateJump(user.uid, jump.id, input) : addJump(user.uid, input);
+    const op = jump ? updateJump(user.uid, jump.id, data) : addJump(user.uid, data);
     op.catch((err: Error) => alert(`Could not save jump #${input.jumpNumber}: ${err.message}`));
     navigate(addAnother ? '/jumps/new' : '/');
   }
@@ -190,6 +239,60 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
         </div>
       </div>
 
+      <div className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Participants</h2>
+          <p className="text-sm text-slate-500">
+            People you add by email can view this jump via its direct link after signing in.
+          </p>
+        </div>
+        {participants.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {participants.map((email) => (
+              <li key={email} className="flex items-center gap-1 rounded-full bg-sky-50 py-1 pl-3 pr-1 text-sm text-sky-800">
+                {email}
+                <button
+                  type="button"
+                  className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-sky-600 hover:bg-sky-100"
+                  aria-label={`Remove ${email}`}
+                  onClick={() => setParticipants((p) => p.filter((e) => e !== email))}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="email"
+            list="participants-list"
+            placeholder="friend@example.com"
+            className="input"
+            aria-label="Participant email"
+            value={participantInput}
+            onChange={(e) => {
+              setParticipantInput(e.target.value);
+              setParticipantError(null);
+            }}
+            onKeyDown={handleParticipantKeyDown}
+          />
+          <button type="button" className="btn btn-secondary" onClick={addParticipant}>Add</button>
+        </div>
+        {participantError && <p className="text-xs text-red-600">{participantError}</p>}
+        {jump && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+            <input readOnly className="input flex-1 text-slate-500" aria-label="Share link" value={sharedJumpUrl(user.uid, jump.id)} onFocus={(e) => e.target.select()} />
+            <button type="button" className="btn btn-secondary" onClick={copyShareLink}>
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+          </div>
+        )}
+        {!jump && participants.length > 0 && (
+          <p className="text-xs text-slate-500">The share link becomes available after saving.</p>
+        )}
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
@@ -209,6 +312,11 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
           {suggestions[key].map((s) => <option key={s} value={s} />)}
         </datalist>
       ))}
+      <datalist id="participants-list">
+        {suggestions.participants
+          .filter((s) => !participants.includes(s))
+          .map((s) => <option key={s} value={s} />)}
+      </datalist>
       <datalist id="jumptype-list">
         {suggestions.jumpType.map((s) => <option key={s} value={s} />)}
       </datalist>
