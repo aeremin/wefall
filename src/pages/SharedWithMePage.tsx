@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
-import { subscribeJumpsSharedWith } from '../lib/jumps';
+import { jumpRef, subscribeJumpsSharedWith } from '../lib/jumps';
 import { formatAltitude, formatDate } from '../lib/format';
 import type { SharedJump } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -67,7 +67,9 @@ export default function SharedWithMePage() {
                 <tr
                   key={`${j.ownerUid}/${j.id}`}
                   className="cursor-pointer hover:bg-sky-50"
-                  onClick={() => navigate(`/shared/${j.ownerUid}/${j.id}`)}
+                  onClick={() =>
+                    navigate(`/shared/${j.ownerUid}/${jumpRef(j, jumps.filter((o) => o.ownerUid === j.ownerUid))}`)
+                  }
                 >
                   <td className="whitespace-nowrap px-4 py-3">
                     {formatDate(j.date)}
