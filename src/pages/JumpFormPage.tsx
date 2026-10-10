@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent, type KeyboardEvent, type ReactNode }
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
-import { addJump, deleteJump, normalizeEmail, sharedJumpUrl, updateJump } from '../lib/jumps';
+import { addJump, deleteJump, normalizeEmail, parseJumpNumber, sharedJumpUrl, updateJump } from '../lib/jumps';
 import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -78,7 +78,8 @@ export default function JumpFormPage() {
   if (loading) return <Spinner />;
 
   if (id) {
-    const jump = jumps.find((j) => j.id === id);
+    const jumpNumber = parseJumpNumber(id);
+    const jump = jumps.find((j) => j.id === id) ?? jumps.find((j) => j.jumpNumber === jumpNumber);
     if (!jump) {
       return (
         <div className="card text-center">
