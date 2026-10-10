@@ -19,6 +19,20 @@ export interface JumpInput {
 
 export interface Jump extends JumpInput {
   id: string;
+  /** Lowercased emails of people who may view this jump via its direct link. */
+  participants: string[];
+}
+
+export interface JumpSharing {
+  participants: string[];
+  /** Owner's display name, shown to participants. */
+  ownerName: string;
+}
+
+/** A jump as seen through a share link, possibly owned by someone else. */
+export interface SharedJump extends Jump {
+  ownerUid: string;
+  ownerName: string;
 }
 
 export const JUMP_TYPES = [

@@ -7,6 +7,7 @@ const navItems = [
   { to: '/', label: 'Logbook', end: true },
   { to: '/stats', label: 'Stats', end: false },
   { to: '/import', label: 'Import', end: false },
+  { to: '/shared', label: 'Shared', end: false },
 ];
 
 export default function Layout() {

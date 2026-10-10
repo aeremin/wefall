@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation, type Location } from 'react-router';
 import { signInWithPopup } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { auth, googleProvider } from '../lib/firebase';
@@ -18,11 +18,12 @@ function errorMessage(err: unknown) {
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
+  const from = (useLocation().state as { from?: Location } | null)?.from;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (loading) return <Spinner fullScreen />;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={from ?? '/'} replace />;
 
   async function signInWithGoogle() {
     setError(null);
@@ -46,6 +47,9 @@ export default function LoginPage() {
         </div>
 
         <div className="card space-y-4 p-6">
+          {from?.pathname.startsWith('/shared/') && (
+            <p className="text-center text-sm text-slate-600">Sign in to view the jump shared with you.</p>
+          )}
           <button className="btn btn-primary w-full" disabled={busy} onClick={signInWithGoogle}>
             Continue with Google
           </button>

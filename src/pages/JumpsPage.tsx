@@ -83,7 +83,17 @@ export default function JumpsPage() {
                     className="cursor-pointer hover:bg-sky-50"
                     onClick={() => navigate(`/jumps/${j.id}`)}
                   >
-                    <td className="px-4 py-3 font-semibold">{j.jumpNumber}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold">
+                      {j.jumpNumber}
+                      {j.participants.length > 0 && (
+                        <span
+                          className="ml-1.5 rounded bg-sky-50 px-1.5 py-0.5 text-xs font-medium text-sky-700"
+                          title={`Shared with ${j.participants.join(', ')}`}
+                        >
+                          +{j.participants.length}
+                        </span>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {formatDate(j.date)}
                       {j.time && <span className="ml-2 text-xs text-slate-500">{j.time}</span>}
