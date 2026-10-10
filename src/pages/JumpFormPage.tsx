@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent, type KeyboardEvent, type ReactNode }
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
-import { addJump, deleteJump, normalizeEmail, parseJumpNumber, sharedJumpUrl, updateJump } from '../lib/jumps';
+import { addJump, deleteJump, jumpRef, normalizeEmail, parseJumpNumber, sharedJumpUrl, updateJump } from '../lib/jumps';
 import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -149,7 +149,7 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
 
   function copyShareLink() {
     if (!jump) return;
-    navigator.clipboard.writeText(sharedJumpUrl(user.uid, jump.id)).then(
+    navigator.clipboard.writeText(sharedJumpUrl(user.uid, jumpRef(jump, jumps))).then(
       () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -283,7 +283,7 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
         {participantError && <p className="text-xs text-red-600">{participantError}</p>}
         {jump && (
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-            <input readOnly className="input flex-1 text-slate-500" aria-label="Share link" value={sharedJumpUrl(user.uid, jump.id)} onFocus={(e) => e.target.select()} />
+            <input readOnly className="input flex-1 text-slate-500" aria-label="Share link" value={sharedJumpUrl(user.uid, jumpRef(jump, jumps))} onFocus={(e) => e.target.select()} />
             <button type="button" className="btn btn-secondary" onClick={copyShareLink}>
               {copied ? 'Copied!' : 'Copy link'}
             </button>

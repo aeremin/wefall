@@ -150,8 +150,16 @@ export function canViewJump(jump: SharedJump, viewer: { uid: string; email: stri
   return jump.ownerUid === viewer.uid || (!!viewer.email && jump.participants.includes(normalizeEmail(viewer.email)));
 }
 
-export function sharedJumpUrl(ownerUid: string, jumpId: string) {
-  return `${window.location.origin}/shared/${ownerUid}/${jumpId}`;
+/**
+ * The path segment that identifies `jump` in links: its jump number, or its id when another jump
+ * among `others` (the jumps the link's viewer can see from the same owner) shares that number.
+ */
+export function jumpRef(jump: Jump, others: Jump[]) {
+  return others.some((j) => j.jumpNumber === jump.jumpNumber && j.id !== jump.id) ? jump.id : String(jump.jumpNumber);
+}
+
+export function sharedJumpUrl(ownerUid: string, jumpRef: string) {
+  return `${window.location.origin}/shared/${ownerUid}/${jumpRef}`;
 }
 
 export function addJump(uid: string, jump: JumpInput & Partial<JumpSharing>) {
