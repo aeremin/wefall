@@ -3,6 +3,7 @@ import {
   collectionGroup,
   deleteDoc,
   doc,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -71,18 +72,45 @@ export function subscribeJumps(
   return listenWithRetry((handleError) => onSnapshot(q, (snap) => onData(snap.docs.map(toJump)), handleError), onError);
 }
 
-/** Emits null when the jump doesn't exist. */
+/** Jump links accept either a document id or a jump number; auto-generated ids are never all digits in practice. */
+export function parseJumpNumber(param: string): number | null {
+  return /^[1-9][0-9]{0,8}$/.test(param) ? Number(param) : null;
+}
+
+/**
+ * `jumpRef` is a document id or a jump number (see `parseJumpNumber`).
+ * Emits null when the jump doesn't exist or, for a jump number, isn't shared with the viewer.
+ */
 export function subscribeSharedJump(
   ownerUid: string,
-  jumpId: string,
+  jumpRef: string,
+  viewer: { uid: string; email: string | null },
   onData: (jump: SharedJump | null, fromCache: boolean) => void,
   onError: (error: Error) => void,
 ) {
+  const jumpNumber = parseJumpNumber(jumpRef);
+  if (jumpNumber == null) {
+    return listenWithRetry(
+      (handleError) =>
+        onSnapshot(
+          doc(jumpsCollection(ownerUid), jumpRef),
+          (d) => onData(d.exists() ? toSharedJump(d) : null, d.metadata.fromCache),
+          handleError,
+        ),
+      onError,
+    );
+  }
+  const filters = [where('jumpNumber', '==', jumpNumber)];
+  // Queries by non-owners are only allowed when restricted to jumps the rules let them read.
+  if (viewer.uid !== ownerUid) {
+    filters.push(where('participants', 'array-contains', normalizeEmail(viewer.email ?? '')));
+  }
+  const q = query(jumpsCollection(ownerUid), ...filters, limit(1));
   return listenWithRetry(
     (handleError) =>
       onSnapshot(
-        doc(jumpsCollection(ownerUid), jumpId),
-        (d) => onData(d.exists() ? toSharedJump(d) : null, d.metadata.fromCache),
+        q,
+        (snap) => onData(snap.empty ? null : toSharedJump(snap.docs[0]), snap.metadata.fromCache),
         handleError,
       ),
     onError,
@@ -122,8 +150,16 @@ export function canViewJump(jump: SharedJump, viewer: { uid: string; email: stri
   return jump.ownerUid === viewer.uid || (!!viewer.email && jump.participants.includes(normalizeEmail(viewer.email)));
 }
 
-export function sharedJumpUrl(ownerUid: string, jumpId: string) {
-  return `${window.location.origin}/shared/${ownerUid}/${jumpId}`;
+/**
+ * The path segment that identifies `jump` in links: its jump number, or its id when another jump
+ * among `others` (the jumps the link's viewer can see from the same owner) shares that number.
+ */
+export function jumpRef(jump: Jump, others: Jump[]) {
+  return others.some((j) => j.jumpNumber === jump.jumpNumber && j.id !== jump.id) ? jump.id : String(jump.jumpNumber);
+}
+
+export function sharedJumpUrl(ownerUid: string, jumpRef: string) {
+  return `${window.location.origin}/shared/${ownerUid}/${jumpRef}`;
 }
 
 export function addJump(uid: string, jump: JumpInput & Partial<JumpSharing>) {

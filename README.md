@@ -12,6 +12,8 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
   even without a logbook of their own
+- Jump links use the jump number, e.g. `/jumps/700` or `/shared/{ownerUid}/700`; jumps with a
+  duplicated number fall back to their id, and id-based links keep working
 - Works offline: jumps logged without reception sync when you're back online
 
 ## Setup

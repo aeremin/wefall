@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useJumps } from '../context/JumpsContext';
 import { downloadCsv, jumpsToCsv } from '../lib/csv';
+import { jumpRef } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds, todayIso } from '../lib/format';
 import Spinner from '../components/Spinner';
 
@@ -81,7 +82,7 @@ export default function JumpsPage() {
                   <tr
                     key={j.id}
                     className="cursor-pointer hover:bg-sky-50"
-                    onClick={() => navigate(`/jumps/${j.id}`)}
+                    onClick={() => navigate(`/jumps/${jumpRef(j, jumps)}`)}
                   >
                     <td className="whitespace-nowrap px-4 py-3 font-semibold">
                       {j.jumpNumber}

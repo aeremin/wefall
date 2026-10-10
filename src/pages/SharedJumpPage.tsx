@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { FirebaseError } from 'firebase/app';
 import { useCurrentUser } from '../context/AuthContext';
-import { canViewJump, subscribeSharedJump } from '../lib/jumps';
+import { useJumps } from '../context/JumpsContext';
+import { canViewJump, jumpRef, subscribeSharedJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
 import type { SharedJump } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -19,6 +20,7 @@ const LOADING: State = { jump: null, loading: true, denied: false, error: null }
 export default function SharedJumpPage() {
   const { ownerUid, jumpId } = useParams() as { ownerUid: string; jumpId: string };
   const user = useCurrentUser();
+  const { jumps: ownJumps } = useJumps();
   const [state, setState] = useState<State>(LOADING);
 
   useEffect(() => {
@@ -27,13 +29,14 @@ export default function SharedJumpPage() {
     return subscribeSharedJump(
       ownerUid,
       jumpId,
+      viewer,
       (jump, fromCache) => {
         if (jump && !canViewJump(jump, viewer)) {
           // The offline cache and other tabs can still serve data fetched for a previously signed-in user.
           if (!fromCache) setState({ jump: null, loading: false, denied: true, error: null });
           return;
         }
-        setState({ jump, loading: false, denied: false, error: null });
+        setState({ jump, loading: false, denied: !jump && ownerUid !== user.uid, error: null });
       },
       (err) =>
         setState({
@@ -83,7 +86,7 @@ export default function SharedJumpPage() {
           </p>
         </div>
         {isOwner && (
-          <Link to={`/jumps/${jump.id}`} className="btn btn-secondary">Edit</Link>
+          <Link to={`/jumps/${jumpRef(jump, ownJumps)}`} className="btn btn-secondary">Edit</Link>
         )}
       </div>
 
