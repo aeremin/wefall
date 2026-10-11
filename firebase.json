@@ -44,5 +44,8 @@
         "supportEmail": "a.eremin.msu@gmail.com"
       }
     }
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
