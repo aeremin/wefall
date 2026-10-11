@@ -74,7 +74,7 @@ export default function JumpsPage() {
                   <th className="hidden px-4 py-3 md:table-cell">Aircraft</th>
                   <th className="px-4 py-3 text-right">Exit</th>
                   <th className="hidden px-4 py-3 text-right sm:table-cell">Freefall</th>
-                  <th className="hidden px-4 py-3 md:table-cell">Canopy</th>
+                  <th className="hidden min-w-[9.5rem] whitespace-nowrap px-4 py-3 md:table-cell">Canopy</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -104,7 +104,7 @@ export default function JumpsPage() {
                     <td className="hidden px-4 py-3 md:table-cell">{j.aircraft || '–'}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">{formatAltitude(j.exitAltitude)}</td>
                     <td className="hidden px-4 py-3 text-right sm:table-cell">{formatSeconds(j.freefallTime)}</td>
-                    <td className="hidden px-4 py-3 md:table-cell">{j.canopy || '–'}</td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 md:table-cell">{j.canopy || '–'}</td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
