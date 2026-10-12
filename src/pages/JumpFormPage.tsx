@@ -6,6 +6,7 @@ import { addJump, deleteJump, jumpRef, normalizeEmail, parseJumpNumber, sharedJu
 import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
+import Attachments from '../components/Attachments';
 
 interface FormValues {
   jumpNumber: string;
@@ -293,6 +294,12 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
           <p className="text-xs text-slate-500">The share link becomes available after saving.</p>
         )}
       </div>
+
+      {jump ? (
+        <Attachments ownerUid={user.uid} jump={jump} editable />
+      ) : (
+        <p className="text-sm text-slate-500">Files can be attached after saving the jump.</p>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

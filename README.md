@@ -7,7 +7,10 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - New jumps are prefilled from your last jump; dropzone/aircraft/canopy autocomplete from history
 - Stats dashboard: totals, freefall time, days since last jump, charts by month/year/type, top dropzones
 - CSV import with automatic column matching (feet are converted to meters) and CSV export
-- ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, time, altitudes and freefall time
+- ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, time, altitudes and freefall time;
+  each file is attached to its jump (re-importing replaces the attachment with the same file name)
+- Attachments: add files such as FlySight CSVs to a saved jump (up to 20 files of 10 MB each);
+  participants can download them from the shared jump page
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
@@ -44,7 +47,17 @@ firebase deploy --only firestore   # rules + indexes
 npm run deploy              # builds and deploys hosting + rules
 ```
 
-Security rules (`firestore.rules`) must be deployed before the app can read or write data.
+Security rules (`firestore.rules`, `storage.rules`) must be deployed before the app can read or write data.
+`storage.rules` reads jump documents to let participants download attachments; allow the Storage
+service agent access to Firestore when the CLI or console asks. The `deleteJumpAttachments` Cloud
+Function removes a jump's files when the jump is deleted (`firebase deploy --only functions`).
+
+Attachments are downloaded through the Storage SDK, which needs CORS on the bucket (once per bucket;
+add custom domains to `cors.json` first):
+
+```sh
+gcloud storage buckets update gs://wefall.firebasestorage.app --cors-file=cors.json
+```
 The **Shared** page needs the collection-group index on `participants` from `firestore.indexes.json`.
 When deploying to a custom domain, add it under Authentication → Settings → Authorized domains.
 
@@ -55,5 +68,8 @@ users/{uid}/jumps/{jumpId}
   jumpNumber, date (YYYY-MM-DD), time (HH:MM:SS or empty), dropzone, aircraft, jumpType,
   exitAltitude (m), deploymentAltitude (m), freefallTime (s),
   canopy, notes, createdAt, updatedAt,
-  participants (lowercased emails that may view the jump), ownerName (shown to participants)
+  participants (lowercased emails that may view the jump), ownerName (shown to participants),
+  attachments: [{ id, name, size (bytes), contentType, uploadedAt (ISO) }]
 ```
+
+Attachment files are stored in Cloud Storage at `users/{uid}/jumps/{jumpId}/{attachmentId}`.

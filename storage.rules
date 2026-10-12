@@ -1,12 +1,26 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+
+    // Jump attachments; their metadata lives in the jump document's `attachments` field.
+    match /users/{userId}/jumps/{jumpId}/{attachmentId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      // Mirrors isParticipant in firestore.rules.
+      function isParticipant() {
+        return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email.lower() in firestore.get(
+              /databases/(default)/documents/users/$(userId)/jumps/$(jumpId)).data.get('participants', []);
+      }
+
+      allow get: if isOwner() || isParticipant();
+      allow delete: if isOwner();
+      // Keep in sync with MAX_ATTACHMENT_BYTES in src/lib/types.ts.
+      allow create, update: if isOwner() && request.resource.size <= 10 * 1024 * 1024;
     }
   }
 }

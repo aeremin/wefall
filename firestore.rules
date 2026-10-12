@@ -26,7 +26,7 @@ service cloud.firestore {
       return d.keys().hasOnly([
           'jumpNumber', 'date', 'time', 'dropzone', 'aircraft', 'jumpType',
           'exitAltitude', 'deploymentAltitude', 'freefallTime',
-          'canopy', 'notes', 'participants', 'ownerName', 'createdAt', 'updatedAt'
+          'canopy', 'notes', 'participants', 'ownerName', 'attachments', 'createdAt', 'updatedAt'
         ])
         && d.jumpNumber is int && d.jumpNumber > 0
         && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -41,7 +41,9 @@ service cloud.firestore {
         && optNumber(d.deploymentAltitude)
         && optNumber(d.freefallTime)
         && (!('participants' in d) || (d.participants is list && d.participants.size() <= 50))
-        && (!('ownerName' in d) || boundedString(d.ownerName, 200));
+        && (!('ownerName' in d) || boundedString(d.ownerName, 200))
+        // Keep in sync with MAX_ATTACHMENTS in src/lib/types.ts.
+        && (!('attachments' in d) || (d.attachments is list && d.attachments.size() <= 20));
     }
 
     match /users/{userId}/jumps/{jumpId} {

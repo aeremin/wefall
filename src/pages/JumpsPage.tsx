@@ -94,6 +94,17 @@ export default function JumpsPage() {
                           +{j.participants.length}
                         </span>
                       )}
+                      {j.attachments.length > 0 && (
+                        <span
+                          className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-xs font-normal text-slate-500"
+                          title={j.attachments.map((a) => a.name).join(', ')}
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-3.5 w-3.5" aria-hidden>
+                            <path d="M14.5 9.5 9.6 14.4a3.2 3.2 0 0 1-4.5-4.5l5.6-5.6a2.1 2.1 0 0 1 3 3l-5.6 5.6a1 1 0 0 1-1.5-1.5l4.9-4.9" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          {j.attachments.length}
+                        </span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {formatDate(j.date)}

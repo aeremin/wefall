@@ -16,12 +16,13 @@ import {
   type ImportRow,
 } from '../lib/csv';
 import { isProTrackFile, parseProTrackFile, type ProTrackJump } from '../lib/protrack';
-import { importJumps, reimportJumps } from '../lib/jumps';
+import { importJumps, type ImportJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
-import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
+import { JUMP_TYPES, type Jump } from '../lib/types';
 
 interface ProTrackFile {
   name: string;
+  file: File;
   jump?: ProTrackJump;
   error?: string;
 }
@@ -37,9 +38,9 @@ const EMPTY_DETAILS: Details = { dropzone: '', aircraft: '', jumpType: '', canop
 
 async function readProTrackFile(f: File): Promise<ProTrackFile> {
   try {
-    return { name: f.name, jump: parseProTrackFile(await f.text()) };
+    return { name: f.name, file: f, jump: parseProTrackFile(await f.text()) };
   } catch (err) {
-    return { name: f.name, error: err instanceof Error ? err.message : String(err) };
+    return { name: f.name, file: f, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -95,17 +96,21 @@ export default function ImportPage() {
   const duplicates = results.filter((r) => r.duplicate).length;
   const errors = results.filter((r) => r.error);
 
+  const toImport = (r: ImportRow): ImportJump =>
+    source?.kind === 'protrack' ? { ...r.jump!, file: source.files[r.line - 1].file } : r.jump!;
+
   const reimport = useMemo(
     () =>
       markDuplicates(parsed, new Set())
         .filter((r) => r.jump && !r.duplicate)
-        .map((r): JumpInput & { id?: string } => {
+        .map((r): ImportJump => {
           const existing = existingByNumber.get(r.jump!.jumpNumber);
-          if (!existing) return r.jump!;
-          if (source?.kind !== 'protrack') return { ...r.jump!, id: existing.id };
+          if (source?.kind !== 'protrack') return existing ? { ...r.jump!, id: existing.id } : r.jump!;
+          const { file, jump } = source.files[r.line - 1];
+          if (!existing) return { ...r.jump!, file };
           // ProTrack files don't record these details, so keep the logbook's values unless overridden.
           const overrides = Object.fromEntries(DETAIL_FIELDS.filter((f) => trimmedDetails[f]).map((f) => [f, trimmedDetails[f]]));
-          return { ...existing, ...overrides, ...source.files[r.line - 1].jump! };
+          return { ...existing, ...overrides, ...jump!, file };
         }),
     [parsed, source, existingByNumber, trimmedDetails],
   );
@@ -151,7 +156,7 @@ export default function ImportPage() {
   }
 
   function handleImport() {
-    return run(ready.length, () => importJumps(user.uid, ready.map((r) => r.jump!), setProgress));
+    return run(ready.length, () => importJumps(user.uid, ready.map(toImport), setProgress));
   }
 
   function handleReimport() {
@@ -164,7 +169,7 @@ export default function ImportPage() {
       (added > 0 ? `, and ${added} new jumps will be added.` : '.') +
       `\n\nThis cannot be undone.`;
     if (!confirm(message)) return;
-    return run(reimport.length, () => reimportJumps(user.uid, reimport, setProgress));
+    return run(reimport.length, () => importJumps(user.uid, reimport, setProgress));
   }
 
   const importing = progress != null;
@@ -179,6 +184,7 @@ export default function ImportPage() {
         </p>
         <p className="mt-1 text-sm text-slate-500">
           You can also select one or more ProTrack jump files (<code>.txt</code>, one jump per file).
+          Each file is attached to its jump.
         </p>
       </div>
 

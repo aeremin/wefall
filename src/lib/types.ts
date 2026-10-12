@@ -17,10 +17,25 @@ export interface JumpInput {
   notes: string;
 }
 
+/** A file stored at `users/{uid}/jumps/{jumpId}/{id}` in Cloud Storage. */
+export interface Attachment {
+  id: string;
+  name: string;
+  /** bytes */
+  size: number;
+  contentType: string;
+  /** ISO timestamp */
+  uploadedAt: string;
+}
+
+export const MAX_ATTACHMENTS = 20;
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
 export interface Jump extends JumpInput {
   id: string;
   /** Lowercased emails of people who may view this jump via its direct link. */
   participants: string[];
+  attachments: Attachment[];
 }
 
 export interface JumpSharing {

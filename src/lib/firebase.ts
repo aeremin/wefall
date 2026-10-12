@@ -5,6 +5,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const app = initializeApp({
   apiKey: 'AIzaSyD-ogo4QlCC-cT57SPTaA0Qo2LE7Xqg6_I',
@@ -22,3 +23,5 @@ export const googleProvider = new GoogleAuthProvider();
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
+
+export const storage = getStorage(app);

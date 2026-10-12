@@ -7,6 +7,7 @@ import { canViewJump, jumpRef, subscribeSharedJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
 import type { SharedJump } from '../lib/types';
 import Spinner from '../components/Spinner';
+import Attachments from '../components/Attachments';
 
 interface State {
   jump: SharedJump | null;
@@ -122,6 +123,8 @@ export default function SharedJumpPage() {
           </ul>
         )}
       </div>
+
+      <Attachments ownerUid={jump.ownerUid} jump={jump} editable={false} />
     </div>
   );
 }

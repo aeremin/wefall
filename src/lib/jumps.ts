@@ -17,7 +17,8 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Jump, JumpInput, JumpSharing, SharedJump } from './types';
+import { withAttachment } from './attachments';
+import type { Attachment, Jump, JumpInput, JumpSharing, SharedJump } from './types';
 
 const jumpsCollection = (uid: string) => collection(db, 'users', uid, 'jumps');
 
@@ -26,6 +27,7 @@ function toJump(d: DocumentSnapshot): Jump {
     ...(d.data() as JumpInput),
     time: d.get('time') ?? '',
     participants: d.get('participants') ?? [],
+    attachments: d.get('attachments') ?? [],
     id: d.id,
   };
 }
@@ -179,46 +181,53 @@ export function deleteJump(uid: string, id: string) {
 }
 
 const BATCH_SIZE = 400;
+const UPLOAD_CONCURRENCY = 6;
 
-export async function importJumps(
-  uid: string,
-  jumps: JumpInput[],
-  onProgress?: (done: number) => void,
-) {
-  for (let i = 0; i < jumps.length; i += BATCH_SIZE) {
-    const batch = writeBatch(db);
-    for (const jump of jumps.slice(i, i + BATCH_SIZE)) {
-      batch.set(doc(jumpsCollection(uid)), {
-        ...jump,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+export type ImportJump = JumpInput & {
+  /** Overwrite this existing document instead of creating a new one. */
+  id?: string;
+  attachments?: Attachment[];
+  /** Attached to the jump, replacing an existing attachment with the same name. */
+  file?: File;
+};
+
+async function mapConcurrent<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>) {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
     }
-    await batch.commit();
-    onProgress?.(Math.min(i + BATCH_SIZE, jumps.length));
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
 }
 
-/** Jumps with an `id` overwrite that existing document; the rest are created. */
-export async function reimportJumps(
-  uid: string,
-  jumps: (JumpInput & { id?: string })[],
-  onProgress?: (done: number) => void,
-) {
+export async function importJumps(uid: string, jumps: ImportJump[], onProgress?: (done: number) => void) {
+  let done = 0;
   for (let i = 0; i < jumps.length; i += BATCH_SIZE) {
+    // Files are uploaded before the batch commits so no jump references a missing file.
+    const prepared = await mapConcurrent(
+      jumps.slice(i, i + BATCH_SIZE),
+      UPLOAD_CONCURRENCY,
+      async ({ id, file, ...jump }) => {
+        const ref = id ? doc(jumpsCollection(uid), id) : doc(jumpsCollection(uid));
+        const data = file
+          ? { ...jump, attachments: await withAttachment(uid, ref.id, jump.attachments ?? [], file) }
+          : jump;
+        onProgress?.(++done);
+        return { ref, isNew: !id, data };
+      },
+    );
     const batch = writeBatch(db);
-    for (const { id, ...jump } of jumps.slice(i, i + BATCH_SIZE)) {
-      if (id) {
-        batch.update(doc(jumpsCollection(uid), id), { ...jump, updatedAt: serverTimestamp() });
+    for (const { ref, isNew, data } of prepared) {
+      if (isNew) {
+        batch.set(ref, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       } else {
-        batch.set(doc(jumpsCollection(uid)), {
-          ...jump,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        batch.update(ref, { ...data, updatedAt: serverTimestamp() });
       }
     }
     await batch.commit();
-    onProgress?.(Math.min(i + BATCH_SIZE, jumps.length));
   }
 }

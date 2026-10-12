@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://wefall.web.app", "https://wefall.firebaseapp.com", "https://wefall.aerem.in", "http://localhost:5173"],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]
