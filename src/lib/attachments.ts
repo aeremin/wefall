@@ -66,6 +66,10 @@ export async function removeAttachment(uid: string, jumpId: string, attachment: 
   }
 }
 
+export async function fetchAttachmentText(ownerUid: string, jumpId: string, attachment: Attachment) {
+  return (await getBlob(attachmentRef(ownerUid, jumpId, attachment.id))).text();
+}
+
 /** Fetched through the SDK (not a public download URL) so the Storage rules apply on every download. */
 export async function downloadAttachment(ownerUid: string, jumpId: string, attachment: Attachment) {
   const blob = await getBlob(attachmentRef(ownerUid, jumpId, attachment.id));

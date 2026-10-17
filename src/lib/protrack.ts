@@ -67,3 +67,47 @@ export function parseProTrackFile(text: string): ProTrackJump {
     freefallTime: parseInteger(raw.freefallTime),
   };
 }
+
+/** ProTrack II logs pressure every 0.25 s, in freefall and under canopy alike. */
+const SAMPLE_INTERVAL_S = 0.25;
+/** Half-width, in samples, of the window vertical speed is averaged over (±1 s). */
+const SPEED_HALF_WINDOW = 4;
+
+export interface ProTrackSample {
+  /** seconds since the first sample */
+  t: number;
+  /** meters above the ground reference */
+  altitude: number;
+  /** descent rate in km/h (positive when falling) */
+  speed: number;
+}
+
+/**
+ * Parses the PIB (pressure) block into an altitude/vertical speed profile. The block starts with the
+ * ground pressure and three more header fields, then the samples; pressures are in tenths of hPa.
+ */
+export function parseProTrackSamples(text: string): ProTrackSample[] {
+  const lines = contentLines(text);
+  const start = lines.indexOf('PIB');
+  const end = lines.indexOf('PIE');
+  if (start === -1 || end < start + 5) throw new Error('No altitude data in this ProTrack file');
+
+  const ground = Number(lines[start + 1]);
+  const pressures = lines
+    .slice(start + 5, end)
+    .flatMap((l) => l.split(','))
+    .filter((v) => v.trim())
+    .map(Number);
+  if (!(ground > 0) || pressures.length < 2 || pressures.some((p) => !(p > 0))) {
+    throw new Error('Altitude data in this ProTrack file is malformed');
+  }
+
+  // International standard atmosphere, relative to the ground pressure.
+  const altitude = pressures.map((p) => 44330 * (1 - (p / ground) ** (1 / 5.255)));
+  return altitude.map((alt, i) => {
+    const a = Math.max(0, i - SPEED_HALF_WINDOW);
+    const b = Math.min(altitude.length - 1, i + SPEED_HALF_WINDOW);
+    const metersPerSecond = (altitude[a] - altitude[b]) / ((b - a) * SAMPLE_INTERVAL_S);
+    return { t: i * SAMPLE_INTERVAL_S, altitude: Math.round(alt), speed: Math.round(metersPerSecond * 3.6) };
+  });
+}

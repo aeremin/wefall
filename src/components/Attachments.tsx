@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { addAttachments, downloadAttachment, removeAttachment } from '../lib/attachments';
 import { ATTACHMENT_TYPE_LABELS } from '../lib/fileTypes';
 import { formatBytes } from '../lib/format';
+import ProTrackChart from './ProTrackChart';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, type Attachment, type Jump } from '../lib/types';
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -38,6 +39,10 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
   }
 
   const sorted = [...jump.attachments].sort((a, b) => a.name.localeCompare(b.name));
+  // The first ProTrack file is plotted until the user picks another one or hides it.
+  const [plottedId, setPlottedId] = useState<string | null | undefined>(undefined);
+  const plotted =
+    plottedId === undefined ? sorted.find((a) => a.type === 'protrack') : sorted.find((a) => a.id === plottedId);
 
   return (
     <div className="card space-y-3">
@@ -70,6 +75,15 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
                 </span>
               )}
               <span className="shrink-0 text-xs text-slate-500">{formatBytes(a.size)}</span>
+              {a.type === 'protrack' && (
+                <button
+                  type="button"
+                  className="shrink-0 cursor-pointer text-xs text-sky-700 hover:underline"
+                  onClick={() => setPlottedId(plotted === a ? null : a.id)}
+                >
+                  {plotted === a ? 'Hide plot' : 'Plot'}
+                </button>
+              )}
               {editable && (
                 <button
                   type="button"
@@ -84,6 +98,7 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
           ))}
         </ul>
       )}
+      {plotted && <ProTrackChart ownerUid={ownerUid} jumpId={jump.id} attachment={plotted} />}
       {editable && jump.attachments.length < MAX_ATTACHMENTS && (
         <input
           type="file"
