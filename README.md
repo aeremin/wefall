@@ -9,9 +9,6 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - CSV import with automatic column matching (feet are converted to meters) and CSV export
 - ProTrack import: select one or more ProTrack jump files (`.txt`) to import number, date, time, altitudes and freefall time;
   each file is attached to its jump (re-importing replaces the attachment with the same file name)
-- Bulk ProTrack attach (`/import/protrack-attachments`): attach a folder of ProTrack files to already logged jumps.
-  Each file is checked against the logged jump's date, time and altitudes, since ProTrack's counter can drift
-  from the logbook; only matching files are attached by default, and a likely renumbered jump is suggested
 - Attachments: add files such as FlySight CSVs to a saved jump (up to 20 files of 10 MB each);
   participants can download them from the shared jump page. The file type (ProTrack, FlySight, FlySight 2,
   GPX, KML, image) is detected from the file's content on upload and shown next to it

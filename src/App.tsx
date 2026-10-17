@@ -8,7 +8,6 @@ import LoginPage from './pages/LoginPage';
 import JumpsPage from './pages/JumpsPage';
 import JumpFormPage from './pages/JumpFormPage';
 import ImportPage from './pages/ImportPage';
-import AttachProTrackPage from './pages/AttachProTrackPage';
 import SharedJumpPage from './pages/SharedJumpPage';
 import SharedWithMePage from './pages/SharedWithMePage';
 
@@ -45,7 +44,6 @@ export default function App() {
               }
             />
             <Route path="import" element={<ImportPage />} />
-            <Route path="import/protrack-attachments" element={<AttachProTrackPage />} />
             <Route path="shared" element={<SharedWithMePage />} />
             <Route path="shared/:ownerUid/:jumpId" element={<SharedJumpPage />} />
           </Route>

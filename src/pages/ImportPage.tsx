@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
 import {
@@ -184,8 +184,7 @@ export default function ImportPage() {
         </p>
         <p className="mt-1 text-sm text-slate-500">
           You can also select one or more ProTrack jump files (<code>.txt</code>, one jump per file).
-          Each file is attached to its jump. To attach ProTrack files to jumps that are already logged,
-          use <Link to="/import/protrack-attachments" className="text-sky-700 hover:underline">bulk attach</Link>.
+          Each file is attached to its jump.
         </p>
       </div>
 
