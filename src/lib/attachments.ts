@@ -3,6 +3,7 @@ import { deleteObject, getBlob, ref, uploadBytes } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { db, storage } from './firebase';
 import { formatBytes } from './format';
+import { detectAttachmentType } from './fileTypes';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, type Attachment, type Jump } from './types';
 
 const attachmentRef = (ownerUid: string, jumpId: string, id: string) =>
@@ -19,11 +20,12 @@ export async function uploadAttachment(
     throw new Error(`${file.name} is larger than ${formatBytes(MAX_ATTACHMENT_BYTES)}.`);
   }
   const contentType = file.type || 'application/octet-stream';
+  const type = await detectAttachmentType(file);
   await uploadBytes(attachmentRef(uid, jumpId, id), file, {
     contentType,
     contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
   });
-  return { id, name: file.name, size: file.size, contentType, uploadedAt: new Date().toISOString() };
+  return { id, name: file.name, size: file.size, contentType, type, uploadedAt: new Date().toISOString() };
 }
 
 /** Uploads `file` and returns `attachments` with it added, replacing an attachment with the same name. */

@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { addAttachments, downloadAttachment, removeAttachment } from '../lib/attachments';
+import { ATTACHMENT_TYPE_LABELS } from '../lib/fileTypes';
 import { formatBytes } from '../lib/format';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, type Attachment, type Jump } from '../lib/types';
 
@@ -63,6 +64,11 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
               >
                 {a.name}
               </button>
+              {a.type && a.type !== 'other' && (
+                <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                  {ATTACHMENT_TYPE_LABELS[a.type]}
+                </span>
+              )}
               <span className="shrink-0 text-xs text-slate-500">{formatBytes(a.size)}</span>
               {editable && (
                 <button

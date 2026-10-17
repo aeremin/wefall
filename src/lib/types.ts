@@ -17,6 +17,15 @@ export interface JumpInput {
   notes: string;
 }
 
+export type AttachmentType =
+  | 'protrack'
+  | 'flysight'
+  | 'flysight2'
+  | 'gpx'
+  | 'kml'
+  | 'image'
+  | 'other';
+
 /** A file stored at `users/{uid}/jumps/{jumpId}/{id}` in Cloud Storage. */
 export interface Attachment {
   id: string;
@@ -24,6 +33,8 @@ export interface Attachment {
   /** bytes */
   size: number;
   contentType: string;
+  /** Detected from the file's content on upload; missing for files uploaded before detection existed. */
+  type?: AttachmentType;
   /** ISO timestamp */
   uploadedAt: string;
 }
