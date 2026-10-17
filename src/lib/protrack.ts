@@ -70,8 +70,8 @@ export function parseProTrackFile(text: string): ProTrackJump {
 
 /** ProTrack II logs pressure every 0.25 s, in freefall and under canopy alike. */
 const SAMPLE_INTERVAL_S = 0.25;
-/** Half-width, in samples, of the window vertical speed is averaged over (±1 s). */
-const SPEED_HALF_WINDOW = 4;
+/** Half-width, in samples, of the window vertical speed is fitted over (±3 s). */
+const SPEED_HALF_WINDOW = 12;
 
 export interface ProTrackSample {
   /** seconds since the first sample */
@@ -104,10 +104,28 @@ export function parseProTrackSamples(text: string): ProTrackSample[] {
 
   // International standard atmosphere, relative to the ground pressure.
   const altitude = pressures.map((p) => 44330 * (1 - (p / ground) ** (1 / 5.255)));
-  return altitude.map((alt, i) => {
-    const a = Math.max(0, i - SPEED_HALF_WINDOW);
-    const b = Math.min(altitude.length - 1, i + SPEED_HALF_WINDOW);
-    const metersPerSecond = (altitude[a] - altitude[b]) / ((b - a) * SAMPLE_INTERVAL_S);
-    return { t: i * SAMPLE_INTERVAL_S, altitude: Math.round(alt), speed: Math.round(metersPerSecond * 3.6) };
-  });
+  return altitude.map((alt, i) => ({
+    t: i * SAMPLE_INTERVAL_S,
+    altitude: Math.round(alt),
+    speed: Math.round(descentRate(altitude, i) * 3.6),
+  }));
+}
+
+/**
+ * Descent rate, in m/s, from the slope of the least-squares line through the altitudes around sample `i`. Every sample in the
+ * window counts, so it is far less jittery than the difference between the window's two ends.
+ */
+function descentRate(altitude: number[], i: number) {
+  const a = Math.max(0, i - SPEED_HALF_WINDOW);
+  const b = Math.min(altitude.length - 1, i + SPEED_HALF_WINDOW);
+  const meanX = (a + b) / 2;
+  let meanY = 0;
+  for (let k = a; k <= b; k++) meanY += altitude[k] / (b - a + 1);
+  let num = 0;
+  let den = 0;
+  for (let k = a; k <= b; k++) {
+    num += (meanX - k) * (altitude[k] - meanY);
+    den += (k - meanX) ** 2;
+  }
+  return num / den / SAMPLE_INTERVAL_S;
 }
