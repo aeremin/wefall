@@ -69,24 +69,25 @@ export function parseProTrackFile(text: string): ProTrackJump {
 }
 
 /** ProTrack II logs pressure every 0.25 s, in freefall and under canopy alike. */
-const SAMPLE_INTERVAL_S = 0.25;
-/** Half-width, in samples, of the window vertical speed is fitted over (±3 s). */
-const SPEED_HALF_WINDOW = 12;
+export const SAMPLE_INTERVAL_S = 0.25;
+/** Default half-width of the window vertical speed is fitted over. */
+export const DEFAULT_SPEED_WINDOW_S = 3;
 
 export interface ProTrackSample {
   /** seconds since the first sample */
   t: number;
   /** meters above the ground reference */
   altitude: number;
-  /** descent rate in km/h (positive when falling) */
+  /** descent rate in m/s (positive when falling) */
   speed: number;
 }
 
 /**
- * Parses the PIB (pressure) block into an altitude/vertical speed profile. The block starts with the
- * ground pressure and three more header fields, then the samples; pressures are in tenths of hPa.
+ * Parses the PIB (pressure) block into altitudes in meters above the ground reference, one per sample.
+ * The block starts with the ground pressure and three more header fields, then the samples; pressures
+ * are in tenths of hPa.
  */
-export function parseProTrackSamples(text: string): ProTrackSample[] {
+export function parseProTrackAltitudes(text: string): number[] {
   const lines = contentLines(text);
   const start = lines.indexOf('PIB');
   const end = lines.indexOf('PIE');
@@ -103,21 +104,27 @@ export function parseProTrackSamples(text: string): ProTrackSample[] {
   }
 
   // International standard atmosphere, relative to the ground pressure.
-  const altitude = pressures.map((p) => 44330 * (1 - (p / ground) ** (1 / 5.255)));
-  return altitude.map((alt, i) => ({
+  return pressures.map((p) => 44330 * (1 - (p / ground) ** (1 / 5.255)));
+}
+
+/** Pairs each altitude with its descent rate, fitted over ±`speedWindowS` seconds. */
+export function proTrackProfile(altitudes: number[], speedWindowS = DEFAULT_SPEED_WINDOW_S): ProTrackSample[] {
+  const halfWindow = Math.max(1, Math.round(speedWindowS / SAMPLE_INTERVAL_S));
+  return altitudes.map((altitude, i) => ({
     t: i * SAMPLE_INTERVAL_S,
-    altitude: Math.round(alt),
-    speed: Math.round(descentRate(altitude, i) * 3.6),
+    altitude,
+    speed: descentRate(altitudes, i, halfWindow),
   }));
 }
 
 /**
- * Descent rate, in m/s, from the slope of the least-squares line through the altitudes around sample `i`. Every sample in the
- * window counts, so it is far less jittery than the difference between the window's two ends.
+ * Descent rate, in m/s, from the slope of the least-squares line through the altitudes within
+ * `halfWindow` samples of sample `i`. Every sample in the window counts, so it is far less jittery
+ * than the difference between the window's two ends.
  */
-function descentRate(altitude: number[], i: number) {
-  const a = Math.max(0, i - SPEED_HALF_WINDOW);
-  const b = Math.min(altitude.length - 1, i + SPEED_HALF_WINDOW);
+function descentRate(altitude: number[], i: number, halfWindow: number) {
+  const a = Math.max(0, i - halfWindow);
+  const b = Math.min(altitude.length - 1, i + halfWindow);
   const meanX = (a + b) / 2;
   let meanY = 0;
   for (let k = a; k <= b; k++) meanY += altitude[k] / (b - a + 1);
