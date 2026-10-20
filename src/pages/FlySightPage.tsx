@@ -273,6 +273,10 @@ export default function FlySightPage() {
                 Within those 30 seconds, click <strong>Connect</strong> and pick your FlySight. Accept the pairing
                 request if your computer asks.
               </li>
+              <li>
+                If Windows reports that the FlySight isn't paired, pair it once in Settings → Bluetooth &amp; devices →
+                Add device → Bluetooth (in pairing mode), then click <strong>Connect</strong>.
+              </li>
             </ol>
           </div>
           <button type="button" className="btn btn-primary" disabled={connecting} onClick={connect}>

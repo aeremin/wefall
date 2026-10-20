@@ -48,6 +48,10 @@ const REFUSED_MESSAGE =
   "The FlySight closed the connection. If it isn't paired with this computer yet, press its button twice " +
   'quickly (the green LED pulses) and click Connect within 30 seconds, before pairing mode ends. If it was ' +
   "paired before, remove it from your computer's Bluetooth settings first, then pair again.";
+const NOT_PAIRED_MESSAGE =
+  "Your computer didn't pair with the FlySight. Put the FlySight in pairing mode (press its button twice " +
+  'quickly; the green LED pulses for 30 seconds) and pair it in your Bluetooth settings: on Windows, Settings → ' +
+  'Bluetooth & devices → Add device → Bluetooth. Then click Connect again.';
 
 const AM_DIR = 0x10;
 
@@ -167,16 +171,21 @@ export class FlySightDevice {
         const tx = await service.getCharacteristic(CRS_TX);
         const rx = await service.getCharacteristic(CRS_RX);
         tx.addEventListener('characteristicvaluechanged', this.handleNotification);
-        // The characteristics require encryption, so this is where the OS pairs with the device.
+        // The characteristics require encryption. Chrome pairs on demand when a characteristic
+        // read needs it, but on Windows not for the descriptor write behind startNotifications(),
+        // which just fails with "Not paired". Reading the encrypted RX characteristic pairs first.
+        await rx.readValue();
         await tx.startNotifications();
         this.rx = rx;
         break;
       } catch (err) {
-        // Still connected means a real error, such as a device without the file service.
-        if (gatt.connected) {
-          gatt.disconnect();
-          throw err;
+        const stillConnected = gatt.connected;
+        if (stillConnected) gatt.disconnect();
+        if (err instanceof Error && /not paired|authenticat|encrypt/i.test(err.message)) {
+          throw new FlySightError(NOT_PAIRED_MESSAGE);
         }
+        // Still connected means a real error, such as a device without the file service.
+        if (stillConnected) throw err;
         if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(REFUSED_MESSAGE);
         await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
       }
