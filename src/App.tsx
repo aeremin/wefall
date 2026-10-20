@@ -12,6 +12,7 @@ import SharedJumpPage from './pages/SharedJumpPage';
 import SharedWithMePage from './pages/SharedWithMePage';
 
 const StatsPage = lazy(() => import('./pages/StatsPage'));
+const FlySightPage = lazy(() => import('./pages/FlySightPage'));
 
 function RequireAuth() {
   const { user, loading } = useAuth();
@@ -44,6 +45,14 @@ export default function App() {
               }
             />
             <Route path="import" element={<ImportPage />} />
+            <Route
+              path="flysight"
+              element={
+                <Suspense fallback={<Spinner />}>
+                  <FlySightPage />
+                </Suspense>
+              }
+            />
             <Route path="shared" element={<SharedWithMePage />} />
             <Route path="shared/:ownerUid/:jumpId" element={<SharedJumpPage />} />
           </Route>

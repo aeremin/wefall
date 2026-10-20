@@ -12,6 +12,9 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - Attachments: add files such as FlySight CSVs to a saved jump (up to 20 files of 10 MB each);
   participants can download them from the shared jump page. The file type (ProTrack, FlySight, FlySight 2,
   GPX, KML, image) is detected from the file's content on upload and shown next to it
+- FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth, so Chrome or Edge) and
+  edit `config.txt` or the selectable configs in `/config` as a form or as text. Selectable configs only
+  write the settings they set; everything else keeps its `config.txt` value, as on the device
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,

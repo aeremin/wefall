@@ -8,6 +8,7 @@ const navItems = [
   { to: '/stats', label: 'Stats', end: false },
   { to: '/import', label: 'Import', end: false },
   { to: '/shared', label: 'Shared', end: false },
+  { to: '/flysight', label: 'FlySight', end: false },
 ];
 
 export default function Layout() {
