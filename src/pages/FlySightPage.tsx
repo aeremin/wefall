@@ -266,10 +266,13 @@ export default function FlySightPage() {
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
               <li>Turn the FlySight off (LED dark) and make sure it's not plugged into USB.</li>
               <li>
-                The first time, put it in pairing mode: press the button twice quickly. The green LED pulses.
-                Once paired, it can connect without this step.
+                The first time, put it in pairing mode: press the button twice quickly. The green LED pulses
+                for 30 seconds. Once paired, it can connect without this step.
               </li>
-              <li>Click <strong>Connect</strong> and pick your FlySight. Accept the pairing request if your computer asks.</li>
+              <li>
+                Within those 30 seconds, click <strong>Connect</strong> and pick your FlySight. Accept the pairing
+                request if your computer asks.
+              </li>
             </ol>
           </div>
           <button type="button" className="btn btn-primary" disabled={connecting} onClick={connect}>

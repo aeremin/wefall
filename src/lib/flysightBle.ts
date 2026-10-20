@@ -41,6 +41,13 @@ const WRITE_ACK_TIMEOUT_MS = 1000;
 const WRITE_MAX_RETRIES = 10;
 /** The firmware drops the connection after 30 s without incoming packets. */
 const KEEP_ALIVE_MS = 10_000;
+/** Chrome's first connection attempt often drops right away, especially on Windows. */
+const CONNECT_ATTEMPTS = 3;
+const CONNECT_RETRY_DELAY_MS = 1000;
+const REFUSED_MESSAGE =
+  "The FlySight closed the connection. If it isn't paired with this computer yet, press its button twice " +
+  'quickly (the green LED pulses) and click Connect within 30 seconds, before pairing mode ends. If it was ' +
+  "paired before, remove it from your computer's Bluetooth settings first, then pair again.";
 
 const AM_DIR = 0x10;
 
@@ -151,21 +158,30 @@ export class FlySightDevice {
   private async connect(): Promise<void> {
     const gatt = this.device.gatt;
     if (!gatt) throw new FlySightError('The device has no GATT server.');
-    this.device.addEventListener('gattserverdisconnected', this.handleDisconnect);
-    try {
-      const server = await gatt.connect();
-      const service = await server.getPrimaryService(CRS_SERVICE);
-      const tx = await service.getCharacteristic(CRS_TX);
-      const rx = await service.getCharacteristic(CRS_RX);
-      tx.addEventListener('characteristicvaluechanged', this.handleNotification);
-      // The characteristics require encryption, so this is where the OS pairs with the device.
-      await tx.startNotifications();
-      this.rx = rx;
-    } catch (err) {
-      this.device.removeEventListener('gattserverdisconnected', this.handleDisconnect);
-      if (gatt.connected) gatt.disconnect();
-      throw err;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        // Outside pairing mode the FlySight only accepts computers it is bonded with. Chrome
+        // reports a refused connection as a successful connect() followed by a disconnect.
+        const server = await gatt.connect();
+        const service = await server.getPrimaryService(CRS_SERVICE);
+        const tx = await service.getCharacteristic(CRS_TX);
+        const rx = await service.getCharacteristic(CRS_RX);
+        tx.addEventListener('characteristicvaluechanged', this.handleNotification);
+        // The characteristics require encryption, so this is where the OS pairs with the device.
+        await tx.startNotifications();
+        this.rx = rx;
+        break;
+      } catch (err) {
+        // Still connected means a real error, such as a device without the file service.
+        if (gatt.connected) {
+          gatt.disconnect();
+          throw err;
+        }
+        if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(REFUSED_MESSAGE);
+        await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
+      }
     }
+    this.device.addEventListener('gattserverdisconnected', this.handleDisconnect);
     this.lastActivity = Date.now();
     this.keepAliveTimer = setInterval(this.keepAlive, KEEP_ALIVE_MS / 2);
   }
