@@ -64,6 +64,8 @@ export interface FlySightFile {
 
 export type ProgressCallback = (bytes: number) => void;
 
+export type ConnectionLog = (line: string) => void;
+
 type PacketHandler = (packet: Uint8Array) => void;
 
 export function isWebBluetoothSupported(): boolean {
@@ -142,11 +144,15 @@ export class FlySightDevice {
     return this.rx != null && !!this.device.gatt?.connected;
   }
 
-  /** Shows the browser's device picker and connects to the chosen FlySight. */
-  static async request(): Promise<FlySightDevice> {
+  /**
+   * Shows the browser's device picker and connects to the chosen FlySight. `log` receives each
+   * connection step and failure, for troubleshooting.
+   */
+  static async request(log: ConnectionLog = () => {}): Promise<FlySightDevice> {
     if (!isWebBluetoothSupported()) {
       throw new FlySightError('This browser does not support Web Bluetooth. Use Chrome or Edge on desktop or Android.');
     }
+    log(`Browser: ${navigator.userAgent}`);
     const device = await navigator.bluetooth.requestDevice({
       filters: [
         { manufacturerData: [{ companyIdentifier: MANUFACTURER_ID }] },
@@ -154,41 +160,62 @@ export class FlySightDevice {
       ],
       optionalServices: [CRS_SERVICE],
     });
+    log(`Picked "${device.name ?? ''}" (id ${device.id})`);
     const flysight = new FlySightDevice(device);
-    await flysight.connect();
+    await flysight.connect(log);
     return flysight;
   }
 
-  private async connect(): Promise<void> {
+  private async connect(log: ConnectionLog): Promise<void> {
     const gatt = this.device.gatt;
     if (!gatt) throw new FlySightError('The device has no GATT server.');
-    for (let attempt = 1; ; attempt++) {
+    const start = Date.now();
+    const logDisconnect = () => log(`+${Date.now() - start} ms: disconnected`);
+    this.device.addEventListener('gattserverdisconnected', logDisconnect);
+    /** Runs one connection step, logging it and how it failed. */
+    const step = async <T>(label: string, work: () => Promise<T>): Promise<T> => {
+      log(`+${Date.now() - start} ms: ${label}`);
       try {
-        // Outside pairing mode the FlySight only accepts computers it is bonded with. Chrome
-        // reports a refused connection as a successful connect() followed by a disconnect.
-        const server = await gatt.connect();
-        const service = await server.getPrimaryService(CRS_SERVICE);
-        const tx = await service.getCharacteristic(CRS_TX);
-        const rx = await service.getCharacteristic(CRS_RX);
-        tx.addEventListener('characteristicvaluechanged', this.handleNotification);
-        // The characteristics require encryption. Chrome pairs on demand when a characteristic
-        // read needs it, but on Windows not for the descriptor write behind startNotifications(),
-        // which just fails with "Not paired". Reading the encrypted RX characteristic pairs first.
-        await rx.readValue();
-        await tx.startNotifications();
-        this.rx = rx;
-        break;
+        return await work();
       } catch (err) {
-        const stillConnected = gatt.connected;
-        if (stillConnected) gatt.disconnect();
-        if (err instanceof Error && /not paired|authenticat|encrypt/i.test(err.message)) {
-          throw new FlySightError(NOT_PAIRED_MESSAGE);
-        }
-        // Still connected means a real error, such as a device without the file service.
-        if (stillConnected) throw err;
-        if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(REFUSED_MESSAGE);
-        await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
+        const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+        log(`+${Date.now() - start} ms: ${label} failed (still connected: ${gatt.connected}): ${reason}`);
+        throw err;
       }
+    };
+
+    try {
+      for (let attempt = 1; ; attempt++) {
+        try {
+          // Outside pairing mode the FlySight only accepts computers it is bonded with. Chrome
+          // reports a refused connection as a successful connect() followed by a disconnect.
+          const server = await step(`attempt ${attempt}: connect`, () => gatt.connect());
+          const service = await step('get file service', () => server.getPrimaryService(CRS_SERVICE));
+          const tx = await step('get TX characteristic', () => service.getCharacteristic(CRS_TX));
+          const rx = await step('get RX characteristic', () => service.getCharacteristic(CRS_RX));
+          tx.addEventListener('characteristicvaluechanged', this.handleNotification);
+          // The characteristics require encryption. Chrome pairs on demand when a characteristic
+          // read needs it, but on Windows not for the descriptor write behind startNotifications(),
+          // which just fails with "Not paired". Reading the encrypted RX characteristic pairs first.
+          await step('read RX (pairs if needed)', () => rx.readValue());
+          await step('start notifications', () => tx.startNotifications());
+          log(`+${Date.now() - start} ms: connected`);
+          this.rx = rx;
+          break;
+        } catch (err) {
+          const stillConnected = gatt.connected;
+          if (stillConnected) gatt.disconnect();
+          if (err instanceof Error && /not paired|authenticat|encrypt/i.test(err.message)) {
+            throw new FlySightError(NOT_PAIRED_MESSAGE);
+          }
+          // Still connected means a real error, such as a device without the file service.
+          if (stillConnected) throw err;
+          if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(REFUSED_MESSAGE);
+          await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
+        }
+      }
+    } finally {
+      this.device.removeEventListener('gattserverdisconnected', logDisconnect);
     }
     this.device.addEventListener('gattserverdisconnected', this.handleDisconnect);
     this.lastActivity = Date.now();

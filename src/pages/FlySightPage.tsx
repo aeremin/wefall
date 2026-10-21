@@ -55,6 +55,9 @@ function contentOf(file: OpenFile): string {
 export default function FlySightPage() {
   const [device, setDevice] = useState<FlySightDevice | null>(null);
   const [connecting, setConnecting] = useState(false);
+  /** Steps of the last connection attempt, shown when it fails. */
+  const [connectionLog, setConnectionLog] = useState<string[]>([]);
+  const [logCopied, setLogCopied] = useState(false);
   const [info, setInfo] = useState<DeviceInfo>({});
   const [configFiles, setConfigFiles] = useState<string[]>([]);
   const [file, setFile] = useState<OpenFile | null>(null);
@@ -97,9 +100,10 @@ export default function FlySightPage() {
     setError(null);
     setNotice(null);
     setConnecting(true);
+    setConnectionLog([]);
     let fs: FlySightDevice;
     try {
-      fs = await FlySightDevice.request();
+      fs = await FlySightDevice.request((line) => setConnectionLog((l) => [...l, line]));
     } catch (err) {
       // Closing the device picker is not an error.
       if (!(err instanceof DOMException && err.name === 'NotFoundError' && /cancel/i.test(err.message))) {
@@ -282,6 +286,26 @@ export default function FlySightPage() {
           <button type="button" className="btn btn-primary" disabled={connecting} onClick={connect}>
             {connecting ? 'Connecting…' : 'Connect'}
           </button>
+          {!connecting && error && connectionLog.length > 1 && (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-slate-600">Connection details</summary>
+              <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-slate-50 p-2 text-xs whitespace-pre-wrap">
+                {connectionLog.join('\n')}
+              </pre>
+              <button
+                type="button"
+                className="btn btn-secondary mt-2 px-3 py-1"
+                onClick={() =>
+                  navigator.clipboard.writeText(`${connectionLog.join('\n')}\nError: ${error}`).then(() => {
+                    setLogCopied(true);
+                    setTimeout(() => setLogCopied(false), 2000);
+                  })
+                }
+              >
+                {logCopied ? 'Copied!' : 'Copy details'}
+              </button>
+            </details>
+          )}
         </div>
       ) : (
         <div className="card flex flex-wrap items-end gap-x-6 gap-y-3">
