@@ -54,6 +54,13 @@ export async function addAttachments(uid: string, jump: Jump, files: File[]) {
   if (failed.length > 0) throw new Error(failed.map((e) => e.message).join('\n'));
 }
 
+/** Uploads `files` to the jump, replacing attachments with the same names, and saves its attachment list. */
+export async function attachFiles(uid: string, jump: Jump, files: File[]) {
+  let attachments = jump.attachments;
+  for (const file of files) attachments = await withAttachment(uid, jump.id, attachments, file);
+  await updateDoc(doc(db, 'users', uid, 'jumps', jump.id), { attachments, updatedAt: serverTimestamp() });
+}
+
 export async function removeAttachment(uid: string, jumpId: string, attachment: Attachment) {
   await updateDoc(doc(db, 'users', uid, 'jumps', jumpId), {
     attachments: arrayRemove(attachment),

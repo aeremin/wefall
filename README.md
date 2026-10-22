@@ -15,7 +15,10 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth: Chrome on Android; Windows
   can't keep a connection with the current FlySight firmware) and
   edit `config.txt` or the selectable configs in `/config` as a form or as text. Selectable configs only
-  write the settings they set; everything else keeps its `config.txt` value, as on the device
+  write the settings they set; everything else keeps its `config.txt` value, as on the device.
+  Its **Tracks** tab finds the exits in each recorded session's `track.csv`, suggests the logbook jump for each
+  (by time, or by order on days without jump times), and attaches the session's `track.csv` and `sensor.csv`
+  to it, named after the session (e.g. `26-10-22_10-15-30_track.csv`) so attached sessions are skipped next time
 - Bluetooth explorer (`/bluetooth`): connect to any Bluetooth LE device, list its services, characteristics
   and descriptors, read, write and subscribe to characteristics, and copy a timestamped log, for working out
   undocumented protocols such as the AON2 X2's. Custom services must be added by UUID, since browsers only

@@ -3,6 +3,7 @@ import { FlySightDevice, isWebBluetoothSupported, isWindows, joinPath } from '..
 import { defaultConfig, parseConfig, serializeConfig, validateConfig, type FlySightConfig } from '../lib/flysightConfig';
 import { formatBytes } from '../lib/format';
 import FlySightConfigForm from '../components/FlySightConfigForm';
+import FlySightTracks from '../components/FlySightTracks';
 
 const MAIN_CONFIG = '/config.txt';
 const CONFIG_DIR = '/config';
@@ -62,6 +63,7 @@ export default function FlySightPage() {
   const [configFiles, setConfigFiles] = useState<string[]>([]);
   const [file, setFile] = useState<OpenFile | null>(null);
   const [view, setView] = useState<'form' | 'text'>('form');
+  const [section, setSection] = useState<'config' | 'tracks'>('config');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -332,7 +334,7 @@ export default function FlySightPage() {
             <p className="text-xs font-medium uppercase text-slate-500">Selected config</p>
             <p className="font-medium">{info.configFile ? joinPath(CONFIG_DIR, info.configFile) : 'None'}</p>
           </div>
-          <label className="ml-auto min-w-56">
+          {section === 'config' && <label className="ml-auto min-w-56">
             <span className="label">File</span>
             <select
               className="input"
@@ -345,11 +347,30 @@ export default function FlySightPage() {
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
-          </label>
+          </label>}
         </div>
       )}
 
       {device && (
+        <div className="flex rounded-lg border border-slate-300 bg-white p-0.5 w-fit" role="tablist" aria-label="FlySight">
+          {(['config', 'tracks'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="tab"
+              aria-selected={section === s}
+              className={`cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium ${
+                section === s ? 'bg-sky-50 text-sky-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              onClick={() => setSection(s)}
+            >
+              {s === 'config' ? 'Config' : 'Tracks'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {device && section === 'config' && (
         <p className="text-sm text-slate-500">
           The FlySight applies <span className="font-mono">{MAIN_CONFIG}</span> first, then the selectable config chosen
           in config mode from <span className="font-mono">{CONFIG_DIR}</span>, whose settings take precedence.
@@ -365,7 +386,7 @@ export default function FlySightPage() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {notice && !error && <p className="text-sm text-slate-600">{notice}</p>}
 
-      {device && file && (
+      {device && file && section === 'config' && (
         <>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-lg border border-slate-300 bg-white p-0.5" role="tablist">
@@ -425,6 +446,8 @@ export default function FlySightPage() {
           </div>
         </>
       )}
+
+      {device && section === 'tracks' && <FlySightTracks device={device} />}
     </div>
   );
 }
