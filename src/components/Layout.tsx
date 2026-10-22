@@ -9,6 +9,7 @@ const navItems = [
   { to: '/import', label: 'Import', end: false },
   { to: '/shared', label: 'Shared', end: false },
   { to: '/flysight', label: 'FlySight', end: false },
+  { to: '/bluetooth', label: 'Bluetooth', end: false },
 ];
 
 export default function Layout() {

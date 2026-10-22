@@ -13,6 +13,7 @@ import SharedWithMePage from './pages/SharedWithMePage';
 
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const FlySightPage = lazy(() => import('./pages/FlySightPage'));
+const BluetoothExplorerPage = lazy(() => import('./pages/BluetoothExplorerPage'));
 
 function RequireAuth() {
   const { user, loading } = useAuth();
@@ -50,6 +51,14 @@ export default function App() {
               element={
                 <Suspense fallback={<Spinner />}>
                   <FlySightPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="bluetooth"
+              element={
+                <Suspense fallback={<Spinner />}>
+                  <BluetoothExplorerPage />
                 </Suspense>
               }
             />

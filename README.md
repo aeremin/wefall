@@ -15,6 +15,10 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth, so Chrome or Edge) and
   edit `config.txt` or the selectable configs in `/config` as a form or as text. Selectable configs only
   write the settings they set; everything else keeps its `config.txt` value, as on the device
+- Bluetooth explorer (`/bluetooth`): connect to any Bluetooth LE device, list its services, characteristics
+  and descriptors, read, write and subscribe to characteristics, and copy a timestamped log, for working out
+  undocumented protocols such as the AON2 X2's. Custom services must be added by UUID, since browsers only
+  expose the services they're told about
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
