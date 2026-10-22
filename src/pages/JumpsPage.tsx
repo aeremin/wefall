@@ -112,7 +112,7 @@ export default function JumpsPage() {
                     </td>
                     <td className="px-4 py-3">{j.dropzone || '–'}</td>
                     <td className="px-4 py-3">{j.jumpType || '–'}</td>
-                    <td className="hidden px-4 py-3 md:table-cell">{j.aircraft || '–'}</td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 md:table-cell">{j.aircraft || '–'}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">{formatAltitude(j.exitAltitude)}</td>
                     <td className="hidden px-4 py-3 text-right sm:table-cell">{formatSeconds(j.freefallTime)}</td>
                     <td className="hidden whitespace-nowrap px-4 py-3 md:table-cell">{j.canopy || '–'}</td>
