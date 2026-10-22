@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { FlySightDevice, isWebBluetoothSupported, joinPath } from '../lib/flysightBle';
+import { FlySightDevice, isWebBluetoothSupported, isWindows, joinPath } from '../lib/flysightBle';
 import { defaultConfig, parseConfig, serializeConfig, validateConfig, type FlySightConfig } from '../lib/flysightConfig';
 import { formatBytes } from '../lib/format';
 import FlySightConfigForm from '../components/FlySightConfigForm';
@@ -246,8 +246,9 @@ export default function FlySightPage() {
         <div className="card">
           <p className="font-medium">This browser can't connect to Bluetooth devices.</p>
           <p className="mt-1 text-sm text-slate-500">
-            Configuring a FlySight 2 needs Web Bluetooth, available in Chrome, Edge and Opera on Windows, macOS,
-            Linux, ChromeOS and Android, served over HTTPS. Safari and Firefox don't support it.
+            Configuring a FlySight 2 needs Web Bluetooth. Use Chrome on Android. Safari and Firefox don't support
+            Web Bluetooth, so this doesn't work on iPhone or iPad. Connecting from Windows doesn't work with the
+            current FlySight 2 firmware.
           </p>
         </div>
       </div>
@@ -267,6 +268,12 @@ export default function FlySightPage() {
         <div className="card space-y-3">
           <div>
             <h2 className="font-semibold">Connect over Bluetooth</h2>
+            {isWindows() && (
+              <p className="mt-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
+                Connecting from Windows doesn't work with the current FlySight 2 firmware: Windows pairs with it, but
+                the FlySight then drops the connection. Use Chrome on Android to configure your FlySight.
+              </p>
+            )}
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
               <li>Turn the FlySight off (LED dark) and make sure it's not plugged into USB.</li>
               <li>
@@ -275,11 +282,13 @@ export default function FlySightPage() {
               </li>
               <li>
                 Within those 30 seconds, click <strong>Connect</strong> and pick your FlySight. Accept the pairing
-                request if your computer asks.
+                request if your phone asks.
               </li>
               <li>
-                If Windows reports that the FlySight isn't paired, pair it once in Settings → Bluetooth &amp; devices →
-                Add device → Bluetooth (in pairing mode), then click <strong>Connect</strong>.
+                If it was paired before and won't connect, clear the old pairing on both sides: remove the FlySight
+                from your phone's Bluetooth settings, and set <span className="font-mono">Reset_BLE: 1</span> in the
+                FlySight's <span className="font-mono">flysight.txt</span> over USB, then restart it. This clears all
+                its pairings.
               </li>
             </ol>
           </div>

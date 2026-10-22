@@ -12,7 +12,8 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - Attachments: add files such as FlySight CSVs to a saved jump (up to 20 files of 10 MB each);
   participants can download them from the shared jump page. The file type (ProTrack, FlySight, FlySight 2,
   GPX, KML, image) is detected from the file's content on upload and shown next to it
-- FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth, so Chrome or Edge) and
+- FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth: Chrome on Android; Windows
+  can't keep a connection with the current FlySight firmware) and
   edit `config.txt` or the selectable configs in `/config` as a form or as text. Selectable configs only
   write the settings they set; everything else keeps its `config.txt` value, as on the device
 - Bluetooth explorer (`/bluetooth`): connect to any Bluetooth LE device, list its services, characteristics

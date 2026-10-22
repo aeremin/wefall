@@ -44,14 +44,23 @@ const KEEP_ALIVE_MS = 10_000;
 /** Chrome's first connection attempt often drops right away, especially on Windows. */
 const CONNECT_ATTEMPTS = 3;
 const CONNECT_RETRY_DELAY_MS = 1000;
+const CLEAR_PAIRINGS =
+  "If it was paired before, clear the old pairing on both sides: remove the FlySight from this device's " +
+  'Bluetooth settings, and on the FlySight set Reset_BLE: 1 in flysight.txt over USB and restart it (this ' +
+  'clears all its pairings).';
 const REFUSED_MESSAGE =
-  "The FlySight closed the connection. If it isn't paired with this computer yet, press its button twice " +
-  'quickly (the green LED pulses) and click Connect within 30 seconds, before pairing mode ends. If it was ' +
-  "paired before, remove it from your computer's Bluetooth settings first, then pair again.";
-const NOT_PAIRED_MESSAGE =
-  "Your computer didn't pair with the FlySight. Put the FlySight in pairing mode (press its button twice " +
-  'quickly; the green LED pulses for 30 seconds) and pair it in your Bluetooth settings: on Windows, Settings → ' +
-  'Bluetooth & devices → Add device → Bluetooth. Then click Connect again.';
+  "The FlySight closed the connection. If it isn't paired with this device yet, press its button twice quickly " +
+  `(the green LED pulses) and click Connect within 30 seconds, before pairing mode ends. ${CLEAR_PAIRINGS}`;
+const PAIRING_FAILED_MESSAGE =
+  'Pairing with the FlySight failed. Put it in pairing mode (press its button twice quickly; the green LED ' +
+  `pulses) and connect again. ${CLEAR_PAIRINGS}`;
+/**
+ * Windows reaches the FlySight but can't keep a connection with the current firmware: Chrome's own
+ * pairing is rejected, and once paired in Windows Settings every connection drops within about 300 ms.
+ */
+const WINDOWS_MESSAGE =
+  "Couldn't connect to the FlySight. Connecting from Windows doesn't work with the current FlySight 2 " +
+  'firmware: Windows pairs with it, but the FlySight then drops the connection. Use Chrome on Android instead.';
 
 const AM_DIR = 0x10;
 
@@ -70,6 +79,11 @@ type PacketHandler = (packet: Uint8Array) => void;
 
 export function isWebBluetoothSupported(): boolean {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+}
+
+/** Windows, where connecting to a FlySight 2 currently fails (see WINDOWS_MESSAGE). */
+export function isWindows(): boolean {
+  return typeof navigator !== 'undefined' && /Windows/.test(navigator.userAgent);
 }
 
 /** Joins path segments the way the firmware expects ("/config/A.TXT"). */
@@ -150,7 +164,7 @@ export class FlySightDevice {
    */
   static async request(log: ConnectionLog = () => {}): Promise<FlySightDevice> {
     if (!isWebBluetoothSupported()) {
-      throw new FlySightError('This browser does not support Web Bluetooth. Use Chrome or Edge on desktop or Android.');
+      throw new FlySightError('This browser does not support Web Bluetooth. Use Chrome on Android.');
     }
     log(`Browser: ${navigator.userAgent}`);
     const device = await navigator.bluetooth.requestDevice({
@@ -206,11 +220,11 @@ export class FlySightDevice {
           const stillConnected = gatt.connected;
           if (stillConnected) gatt.disconnect();
           if (err instanceof Error && /not paired|authenticat|encrypt/i.test(err.message)) {
-            throw new FlySightError(NOT_PAIRED_MESSAGE);
+            throw new FlySightError(isWindows() ? WINDOWS_MESSAGE : PAIRING_FAILED_MESSAGE);
           }
           // Still connected means a real error, such as a device without the file service.
           if (stillConnected) throw err;
-          if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(REFUSED_MESSAGE);
+          if (attempt >= CONNECT_ATTEMPTS) throw new FlySightError(isWindows() ? WINDOWS_MESSAGE : REFUSED_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS));
         }
       }
