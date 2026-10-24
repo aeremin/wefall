@@ -1,10 +1,8 @@
 package app.wefall.companion
 
-import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
@@ -238,16 +236,8 @@ class MainActivity : Activity() {
         val share = LocalServer.start(kind, kind.label, files)
         ui(gen) {
             ShareService.start(this)
-            requestNotificationPermission()
             showShared(share)
             openPage(share)
-        }
-    }
-
-    /** Without it the sharing notification (and its Stop button) stays hidden; sharing works either way. */
-    private fun requestNotificationPermission() {
-        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
         }
     }
 
@@ -269,6 +259,5 @@ class MainActivity : Activity() {
         private const val MOUNT_TIMEOUT_MS = 30_000L
         private const val POLL_MS = 500L
         private const val REQUEST_ACCESS = 1
-        private const val REQUEST_NOTIFICATIONS = 2
     }
 }

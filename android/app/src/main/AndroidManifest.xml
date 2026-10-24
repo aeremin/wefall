@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!--
+      Not asked for at runtime: the prompt would open behind the browser. Sharing works without it; the
+      notification with its Stop button shows once notifications are allowed in the app's settings.
+    -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
