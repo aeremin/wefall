@@ -8,6 +8,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /** One entry of a directory listing, shaped like the page's FlySightFile. */
 data class Entry(val name: String, val size: Long, val modified: Long?, val isDirectory: Boolean)
@@ -25,13 +26,20 @@ interface DeviceFiles {
 
 private fun segments(path: String) = path.split('/').filter { it.isNotEmpty() }
 
-/** A USB drive mounted by Android, read through the Storage Access Framework tree the user granted. */
+/**
+ * A USB drive mounted by Android, read through the Storage Access Framework tree the user granted.
+ * Folder listings are cached, since every path is resolved from the root and the devices don't record
+ * while they're plugged in as a drive.
+ */
 class SafFiles(context: Context, private val tree: Uri) : DeviceFiles {
     private val resolver = context.contentResolver
+    private val listings = ConcurrentHashMap<String, List<Child>>()
 
     private class Child(val documentId: String, val entry: Entry)
 
-    private fun children(documentId: String): List<Child> {
+    private fun children(documentId: String): List<Child> = listings.getOrPut(documentId) { query(documentId) }
+
+    private fun query(documentId: String): List<Child> {
         val uri = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
         val projection = arrayOf(
             Document.COLUMN_DOCUMENT_ID,
