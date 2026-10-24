@@ -18,7 +18,7 @@ import {
 import { isProTrackFile, parseProTrackFile, type ProTrackJump } from '../lib/protrack';
 import { importJumps, type ImportJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
-import type { CompanionDevice } from '../lib/companionApp';
+import { ANDROID_APP_URL, type CompanionDevice } from '../lib/companionApp';
 import { useCompanionDevice } from '../components/useCompanionDevice';
 import { JUMP_TYPES, type Jump } from '../lib/types';
 
@@ -214,6 +214,12 @@ export default function ImportPage() {
           You can also select one or more ProTrack jump files (<code>.txt</code>, one jump per file).
           Each file is attached to its jump.
         </p>
+        {!companion.link && (
+          <p className="mt-1 text-sm text-slate-500">
+            On Android, the <a href={ANDROID_APP_URL} className="font-medium text-sky-700 hover:underline">WeFall app</a>{' '}
+            reads the jumps from a ProTrack plugged into your phone and opens them here.
+          </p>
+        )}
       </div>
 
       <div className="card">

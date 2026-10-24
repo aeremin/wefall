@@ -1,0 +1,39 @@
+# Builds the Android app from a tag like android-v1.2.3, signs it with the release key and publishes it as a
+# GitHub release. The site links to releases/latest/download/wefall.apk.
+name: Release the Android app
+on:
+  push:
+    tags:
+      - 'android-v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Build the signed APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          WEFALL_KEYSTORE: ${{ runner.temp }}/release.jks
+          WEFALL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          WEFALL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$WEFALL_KEYSTORE"
+          ./gradlew assembleRelease -PreleaseVersion="${GITHUB_REF_NAME#android-v}"
+          rm "$WEFALL_KEYSTORE"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#android-v}"
+          cp app/build/outputs/apk/release/app-release.apk wefall.apk
+          gh release create "$GITHUB_REF_NAME" wefall.apk --title "WeFall for Android $version" --generate-notes

@@ -105,6 +105,42 @@ cd android
 To try it against the dev server, run `adb reverse tcp:5173 tcp:5173` and build with
 `./gradlew assembleDebug -PwefallUrl=http://localhost:5173`.
 
+### Releasing the Android app
+
+Pushing a tag like `android-v1.2.3` runs `.github/workflows/android-release.yml`, which builds the app as
+version 1.2.3 (version code 10203; each release needs a higher version), signs it with the release key and
+publishes it as a GitHub release with `wefall.apk` attached. The Import and FlySight pages link to
+`https://github.com/aeremin/wefall/releases/latest/download/wefall.apk`.
+
+```sh
+git tag android-v0.1.0
+git push origin android-v0.1.0
+```
+
+The release key is created once and must never be lost: Android only installs an update signed with the same
+key, so without it everyone would have to uninstall the app to get a new version. Keep it out of the repo
+(`*.jks` is ignored) and back up the file and its password somewhere safe, such as a password manager.
+
+1. Create the key with the `keytool` that comes with Android Studio's JDK. It asks for a password and your
+   name:
+
+   ```sh
+   keytool -genkeypair -keystore wefall-release.jks -alias wefall -keyalg RSA -keysize 4096 -validity 10000
+   ```
+
+2. Add three repository secrets under GitHub → Settings → Secrets and variables → Actions:
+   - `ANDROID_KEYSTORE_BASE64`: the key file in base64. In PowerShell,
+     `[Convert]::ToBase64String([IO.File]::ReadAllBytes("wefall-release.jks")) | Set-Clipboard` copies it.
+   - `ANDROID_KEYSTORE_PASSWORD`: its password.
+   - `ANDROID_KEY_ALIAS`: `wefall`.
+
+To build a signed release locally, set `WEFALL_KEYSTORE` (the key file's path), `WEFALL_KEYSTORE_PASSWORD`
+and `WEFALL_KEY_ALIAS` and run `./gradlew assembleRelease -PreleaseVersion=1.2.3`. Without them,
+`assembleRelease` leaves the APK unsigned.
+
+A phone with a debug build installed has to uninstall it before installing a release, since they're signed
+with different keys. It then asks again for access to each device's drive.
+
 ## Data model
 
 ```

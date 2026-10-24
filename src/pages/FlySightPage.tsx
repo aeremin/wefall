@@ -6,7 +6,7 @@ import { formatBytes } from '../lib/format';
 import FlySightConfigForm from '../components/FlySightConfigForm';
 import FlySightTracks from '../components/FlySightTracks';
 import { useCompanionDevice } from '../components/useCompanionDevice';
-import { parseCompanionLink } from '../lib/companionApp';
+import { ANDROID_APP_URL, parseCompanionLink } from '../lib/companionApp';
 
 const MAIN_CONFIG = '/config.txt';
 const CONFIG_DIR = '/config';
@@ -301,6 +301,13 @@ function BluetoothFlySight() {
           <button type="button" className="btn btn-secondary" onClick={disconnect}>Disconnect</button>
         )}
       </div>
+      {!device && (
+        <p className="text-sm text-slate-500">
+          On Android, the <a href={ANDROID_APP_URL} className="font-medium text-sky-700 hover:underline">WeFall app</a>{' '}
+          opens the Tracks tab by itself when you plug the FlySight into your phone over USB, which is much faster than
+          Bluetooth.
+        </p>
+      )}
 
       {!device ? (
         <div className="card space-y-3">

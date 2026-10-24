@@ -6,3 +6,6 @@ local.properties
 captures/
 .cxx/
 .kotlin/
+# Release signing keys; see "Releasing the Android app" in the README.
+*.jks
+*.keystore

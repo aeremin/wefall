@@ -23,6 +23,9 @@ export function parseCompanionLink(hash: string): CompanionLink | null {
   return match ? { port: Number(match[1]), token: match[2] } : null;
 }
 
+/** The latest build of the Android app, published by .github/workflows/android-release.yml. */
+export const ANDROID_APP_URL = 'https://github.com/aeremin/wefall/releases/latest/download/wefall.apk';
+
 export class CompanionError extends Error {}
 
 const UNREACHABLE =
