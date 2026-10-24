@@ -143,6 +143,10 @@ class MainActivity : Activity() {
                 checked += volume.uuid!!
                 try {
                     if (readDevice(gen, volume)) return
+                    // Something else, like an SD card; the device may still be mounting.
+                    ui(gen) {
+                        show("Looking for the device…", "Waiting for Android to open it as a USB drive.", busy = true)
+                    }
                 } catch (e: Exception) {
                     Log.w(TAG, "Reading ${volume.uuid} failed", e)
                     return ui(gen) {
@@ -165,7 +169,7 @@ class MainActivity : Activity() {
             if (checked.isNotEmpty()) {
                 show(
                     "Not a ProTrack or FlySight 2",
-                    "The USB drive doesn't have ProTrack jump files or FlySight 2 sessions.",
+                    "The USB drive has neither a ProTrack's SETUP/STATUS.TXT nor a FlySight 2's flysight.txt.",
                     actionLabel = "Try again",
                 ) { search(MOUNT_TIMEOUT_MS) }
             } else {
@@ -222,11 +226,13 @@ class MainActivity : Activity() {
             share(gen, DeviceKind.FLYSIGHT2, files)
             return true
         }
-        val jumps = Detector.proTrackJumpFiles(files)
-        if (jumps.isEmpty()) return false
-        ui(gen) { show("Copying ${jumps.size} ProTrack jumps…", "", busy = true) }
-        val copy = File(filesDir, "protrack")
-        Detector.copyJumpFiles(files, jumps, copy)
+        if (!Detector.isProTrack(files)) return false
+        // One copy per drive, so plugging the same ProTrack in again only reads its new jumps.
+        val copy = File(filesDir, "protrack/${volume.uuid}")
+        val description = volume.getDescription(this)
+        Detector.syncJumpFiles(files, copy) { done, total ->
+            ui(gen) { show("Reading $description…", "$done of $total files", busy = true) }
+        }
         share(gen, DeviceKind.PROTRACK, LocalFiles(copy))
         return true
     }

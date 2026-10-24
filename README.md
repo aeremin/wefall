@@ -86,8 +86,9 @@ When deploying to a custom domain, add it under Authentication → Settings → 
    the device it was opened for, so the ProTrack's can replace the generic entry.
 2. It waits for Android to mount the drive and reads it through the Storage Access Framework. Android asks
    once per drive for access.
-3. A drive with `flysight.txt` in its root is a FlySight 2; one with ProTrack jump files (`.txt` files
-   starting with `JIB`) is a ProTrack, whose jump files are copied to the phone so it can be unplugged.
+3. A drive with `flysight.txt` in its root is a FlySight 2; one with `SETUP/STATUS.TXT` is a ProTrack, whose
+   jump files (`.txt` files starting with `JIB`) are copied to the phone so it can be unplugged. Jumps copied
+   on an earlier plug-in aren't read again.
 4. It serves the files on `http://127.0.0.1:<port>` (`LocalServer.kt`; only to the WeFall site and the
    Vite dev server, with a per-share token) from a foreground service that stops after 15 idle minutes, and opens
    `/import` or `/flysight` with `#app=<port>:<token>` in a Chrome Custom Tab, which shares Chrome's sign-in.
