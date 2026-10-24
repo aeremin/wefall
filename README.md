@@ -81,9 +81,8 @@ When deploying to a custom domain, add it under Authentication → Settings → 
 
 `android/` is a small Kotlin app (no Firebase of its own) that hands a plugged-in device's files to the site:
 
-1. Its `USB_DEVICE_ATTACHED` filter (`res/xml/device_filter.xml`) opens it for the FlySight 2 (16d0:0569) and,
-   since the ProTrack II's USB ids aren't published, for any USB mass storage device. The app shows the ids of
-   the device it was opened for, so the ProTrack's can replace the generic entry.
+1. Its `USB_DEVICE_ATTACHED` filter (`res/xml/device_filter.xml`) opens it for the FlySight 2 (16d0:0569) and
+   the ProTrack II (c1ca:babb), and for no other USB device.
 2. It waits for Android to mount the drive and reads it through the Storage Access Framework. Android asks
    once per drive for access.
 3. A drive with `flysight.txt` in its root is a FlySight 2; one with `SETUP/STATUS.TXT` is a ProTrack, whose

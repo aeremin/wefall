@@ -2,10 +2,6 @@
 <resources>
     <!-- FlySight 2 (USBD_VID / USBD_PID in flysight-2-firmware's usbd_desc.c). -->
     <usb-device vendor-id="5840" product-id="1385" />
-    <!--
-      L&B doesn't publish the ProTrack II's USB ids, so match any USB mass storage device (interface
-      class 8); the app checks the drive's files and ignores anything else. Once the ProTrack's ids are
-      known (the app shows them), a vendor-id/product-id entry can replace this one.
-    -->
-    <usb-device class="8" />
+    <!-- ProTrack II, which reports c1ca:babb ("PROTRACK2" by HCC-Embedded, the maker of its USB stack). -->
+    <usb-device vendor-id="49610" product-id="47803" />
 </resources>
