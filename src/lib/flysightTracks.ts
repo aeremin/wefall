@@ -15,6 +15,9 @@ const TIME_DIR_RE = /^\d\d-\d\d-\d\d$/;
 export const TRACK_FILE = 'track.csv';
 export const SENSOR_FILE = 'sensor.csv';
 
+/** Where sessions are read from: a FlySight over Bluetooth, or one plugged into the phone running the WeFall app. */
+export type FlySightFileSource = Pick<FlySightDevice, 'listDir' | 'readFile' | 'connected'>;
+
 export interface FlySightSession {
   /** Folder on the device, e.g. "/26-10-22/10-15-30". */
   path: string;
@@ -43,7 +46,7 @@ export interface DetectedJump {
 }
 
 /** Lists the dated sessions on the device, newest first. Undated sessions in /temp have no GPS fix. */
-export async function listSessions(fs: FlySightDevice): Promise<FlySightSession[]> {
+export async function listSessions(fs: FlySightFileSource): Promise<FlySightSession[]> {
   const sessions: FlySightSession[] = [];
   const dates = (await fs.listDir('/')).filter((d) => d.isDirectory && DATE_DIR_RE.test(d.name));
   for (const date of dates) {

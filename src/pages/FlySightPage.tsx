@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useLocation } from 'react-router';
 import { FlySightDevice, isWebBluetoothSupported, isWindows, joinPath } from '../lib/flysightBle';
 import { defaultConfig, parseConfig, serializeConfig, validateConfig, type FlySightConfig } from '../lib/flysightConfig';
 import { formatBytes } from '../lib/format';
 import FlySightConfigForm from '../components/FlySightConfigForm';
 import FlySightTracks from '../components/FlySightTracks';
+import { useCompanionDevice } from '../components/useCompanionDevice';
+import { parseCompanionLink } from '../lib/companionApp';
 
 const MAIN_CONFIG = '/config.txt';
 const CONFIG_DIR = '/config';
@@ -54,6 +57,39 @@ function contentOf(file: OpenFile): string {
 }
 
 export default function FlySightPage() {
+  const { hash } = useLocation();
+  return parseCompanionLink(hash) ? <UsbFlySight /> : <BluetoothFlySight />;
+}
+
+/** A FlySight plugged into this phone, opened by the WeFall Android app: finds and attaches its tracks. */
+function UsbFlySight() {
+  const { device, error } = useCompanionDevice();
+  const wrongKind = device != null && device.kind !== 'flysight2';
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">FlySight 2</h1>
+      <div className="card">
+        <p className="text-xs font-medium uppercase text-slate-500">Device</p>
+        <p className="font-medium">{device?.name ?? 'FlySight 2'}</p>
+        <p className="text-sm text-slate-500">
+          Plugged into this phone and shared by the WeFall app. Keep it plugged in until its tracks are attached.
+        </p>
+      </div>
+      {!device && !error && (
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
+          Connecting to the WeFall app…
+        </div>
+      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {wrongKind && <p className="text-sm text-red-600">The WeFall app is sharing a {device.name}, not a FlySight.</p>}
+      {device && !wrongKind && <FlySightTracks device={device} autoScan />}
+    </div>
+  );
+}
+
+function BluetoothFlySight() {
   const [device, setDevice] = useState<FlySightDevice | null>(null);
   const [connecting, setConnecting] = useState(false);
   /** Steps of the last connection attempt, shown when it fails. */

@@ -1,0 +1,9 @@
+[versions]
+agp = "9.4.1"
+browser = "1.10.0"
+
+[libraries]
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

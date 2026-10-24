@@ -23,6 +23,10 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
   and descriptors, read, write and subscribe to characteristics, and copy a timestamped log, for working out
   undocumented protocols such as the AON2 X2's. Custom services must be added by UUID, since browsers only
   expose the services they're told about
+- Android companion app (`android/`): plug a ProTrack II or FlySight 2 into the phone over USB and the app
+  opens by itself, reads the device and opens WeFall in the browser with its data: ProTrack jumps on the
+  import page, FlySight 2 sessions on the FlySight page's Tracks tab (which finds their jumps right away).
+  See [Android app](#android-app)
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
@@ -72,6 +76,34 @@ gcloud storage buckets update gs://wefall.firebasestorage.app --cors-file=cors.j
 ```
 The **Shared** page needs the collection-group index on `participants` from `firestore.indexes.json`.
 When deploying to a custom domain, add it under Authentication → Settings → Authorized domains.
+
+## Android app
+
+`android/` is a small Kotlin app (no Firebase of its own) that hands a plugged-in device's files to the site:
+
+1. Its `USB_DEVICE_ATTACHED` filter (`res/xml/device_filter.xml`) opens it for the FlySight 2 (16d0:0569) and,
+   since the ProTrack II's USB ids aren't published, for any USB mass storage device. The app shows the ids of
+   the device it was opened for, so the ProTrack's can replace the generic entry.
+2. It waits for Android to mount the drive and reads it through the Storage Access Framework. Android asks
+   once per drive for access.
+3. A drive with `flysight.txt` in its root is a FlySight 2; one with ProTrack jump files (`.txt` files
+   starting with `JIB`) is a ProTrack, whose jump files are copied to the phone so it can be unplugged.
+4. It serves the files on `http://127.0.0.1:<port>` (`LocalServer.kt`; only to the WeFall site and the
+   Vite dev server, with a per-share token) from a foreground service that stops after 15 idle minutes, and opens
+   `/import` or `/flysight` with `#app=<port>:<token>` in a Chrome Custom Tab, which shares Chrome's sign-in.
+   Chrome asks once per site to let the page access other apps and services on the device.
+
+The page it opens is `WEFALL_URL` in `android/app/build.gradle.kts` (`https://wefall.web.app`).
+It runs on Android 16 and later (targets Android 17) and builds with Android Gradle Plugin 9.4 and Gradle 9.8,
+which need JDK 17 or later (Android Studio's bundled JDK works). Build with Android Studio or:
+
+```sh
+cd android
+./gradlew assembleDebug    # app/build/outputs/apk/debug/app-debug.apk
+```
+
+To try it against the dev server, run `adb reverse tcp:5173 tcp:5173` and build with
+`./gradlew assembleDebug -PwefallUrl=http://localhost:5173`.
 
 ## Data model
 

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
@@ -18,6 +18,8 @@ import {
 import { isProTrackFile, parseProTrackFile, type ProTrackJump } from '../lib/protrack';
 import { importJumps, type ImportJump } from '../lib/jumps';
 import { formatAltitude, formatDate, formatSeconds } from '../lib/format';
+import type { CompanionDevice } from '../lib/companionApp';
+import { useCompanionDevice } from '../components/useCompanionDevice';
 import { JUMP_TYPES, type Jump } from '../lib/types';
 
 interface ProTrackFile {
@@ -57,6 +59,10 @@ export default function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [total, setTotal] = useState(0);
+  const companion = useCompanionDevice();
+  /** The app's share whose jump files were loaded, so they're read once. */
+  const loadedFrom = useRef<CompanionDevice | null>(null);
+  const [fromApp, setFromApp] = useState(false);
 
   const existingNumbers = useMemo(() => new Set(jumps.map((j) => j.jumpNumber)), [jumps]);
   const existingByNumber = useMemo(() => {
@@ -116,9 +122,31 @@ export default function ImportPage() {
   );
   const overwriteCount = reimport.filter((j) => j.id).length;
 
+  useEffect(() => {
+    const device = companion.device;
+    if (!device || loadedFrom.current === device) return;
+    loadedFrom.current = device;
+    if (device.kind !== 'protrack') {
+      setError(`The WeFall app is sharing a ${device.name}, not a ProTrack.`);
+      return;
+    }
+    device.readAllFiles().then(
+      async (files) => {
+        if (files.length === 0) throw new Error('The ProTrack has no jumps.');
+        await loadFiles(files);
+        setFromApp(true);
+      },
+    ).catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, [companion.device]);
+
   async function handleFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = [...(e.target.files ?? [])];
     if (files.length === 0) return;
+    setFromApp(false);
+    await loadFiles(files);
+  }
+
+  async function loadFiles(files: File[]) {
     setError(null);
     try {
       const texts = await Promise.all(files.map((f) => f.text()));
@@ -191,10 +219,22 @@ export default function ImportPage() {
       <div className="card">
         <input type="file" multiple accept=".csv,text/csv,.txt,text/plain" onChange={handleFiles} disabled={importing} className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-sky-50 file:px-4 file:py-2 file:font-medium file:text-sky-700 hover:file:bg-sky-100" />
         {source?.kind === 'csv' && <p className="mt-2 text-sm text-slate-500">{source.name}: {source.rows.length} rows</p>}
-        {source?.kind === 'protrack' && <p className="mt-2 text-sm text-slate-500">{source.files.length} ProTrack files</p>}
+        {source?.kind === 'protrack' && (
+          <p className="mt-2 text-sm text-slate-500">
+            {source.files.length} ProTrack files{fromApp && ' from the ProTrack plugged into this phone'}
+          </p>
+        )}
+        {companion.link && !source && !companion.error && !error && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
+            Reading jumps from the WeFall app…
+          </div>
+        )}
       </div>
 
-      {error && <div className="card border-red-200 bg-red-50 text-sm text-red-700">{error}</div>}
+      {(companion.error || error) && (
+        <div className="card border-red-200 bg-red-50 text-sm text-red-700">{companion.error ?? error}</div>
+      )}
 
       {source?.kind === 'csv' && (
         <div className="card space-y-4">

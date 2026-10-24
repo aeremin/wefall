@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WeFall" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#0284c7</item>
+        <item name="android:colorAccent">#0284c7</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <!-- The app draws behind the status bar, which needs dark icons on the white background. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

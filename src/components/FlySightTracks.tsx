@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
 import { attachFiles } from '../lib/attachments';
-import type { FlySightDevice, FlySightFile } from '../lib/flysightBle';
+import type { FlySightFile } from '../lib/flysightBle';
 import { formatAltitude, formatBytes, formatDate } from '../lib/format';
 import {
   SENSOR_FILE,
@@ -15,6 +15,7 @@ import {
   matchJumps,
   parseTrack,
   type DetectedJump,
+  type FlySightFileSource,
   type FlySightSession,
   type MatchKind,
 } from '../lib/flysightTracks';
@@ -58,9 +59,10 @@ const MATCH_LABELS: Record<MatchKind, string> = {
   order: 'Matched by order on that day',
 };
 
-export default function FlySightTracks({ device }: { device: FlySightDevice }) {
+/** With `autoScan`, finds jumps in the new sessions as soon as they're listed (for a FlySight plugged into the phone). */
+export default function FlySightTracks({ device, autoScan = false }: { device: FlySightFileSource; autoScan?: boolean }) {
   const user = useCurrentUser();
-  const { jumps } = useJumps();
+  const { jumps, loading: jumpsLoading } = useJumps();
   const [sessions, setSessions] = useState<FlySightSession[] | null>(null);
   const [scanned, setScanned] = useState<Map<string, ScannedSession>>(new Map());
   /** Jump picked by hand per row: a jump id, or '' for "don't attach". */
@@ -116,6 +118,14 @@ export default function FlySightTracks({ device }: { device: FlySightDevice }) {
 
   const unscanned = (sessions ?? []).filter((s) => !scanned.has(s.path) && !isAttached(s));
   const attachedCount = (sessions ?? []).filter(isAttached).length;
+
+  const autoScanned = useRef(false);
+  useEffect(() => {
+    // Waits for the logbook, which tells which sessions are attached already.
+    if (!autoScan || autoScanned.current || jumpsLoading || !sessions || unscanned.length === 0) return;
+    autoScanned.current = true;
+    scan();
+  });
 
   async function scan() {
     stopRef.current = false;
