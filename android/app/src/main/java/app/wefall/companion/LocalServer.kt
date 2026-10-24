@@ -61,7 +61,9 @@ object LocalServer {
         share = next
         lastRequestAt = System.currentTimeMillis()
         if (socket == null) {
-            val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
+            // Not InetAddress.getLoopbackAddress(): on Android that's ::1, which doesn't accept the page's
+            // connections to 127.0.0.1.
+            val server = ServerSocket(0, 50, InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
             socket = server
             Thread({ accept(server) }, "LocalServer").start()
         }
