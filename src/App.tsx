@@ -14,6 +14,7 @@ import SharedWithMePage from './pages/SharedWithMePage';
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const FlySightPage = lazy(() => import('./pages/FlySightPage'));
 const BluetoothExplorerPage = lazy(() => import('./pages/BluetoothExplorerPage'));
+const TrackPage = lazy(() => import('./pages/TrackPage'));
 
 function RequireAuth() {
   const { user, loading } = useAuth();
@@ -37,6 +38,14 @@ export default function App() {
             <Route index element={<JumpsPage />} />
             <Route path="jumps/new" element={<JumpFormPage />} />
             <Route path="jumps/:id" element={<JumpFormPage />} />
+            <Route
+              path="jumps/:id/track/:attachmentId"
+              element={
+                <Suspense fallback={<Spinner />}>
+                  <TrackPage />
+                </Suspense>
+              }
+            />
             <Route
               path="stats"
               element={
@@ -64,6 +73,14 @@ export default function App() {
             />
             <Route path="shared" element={<SharedWithMePage />} />
             <Route path="shared/:ownerUid/:jumpId" element={<SharedJumpPage />} />
+            <Route
+              path="shared/:ownerUid/:jumpId/track/:attachmentId"
+              element={
+                <Suspense fallback={<Spinner />}>
+                  <TrackPage />
+                </Suspense>
+              }
+            />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

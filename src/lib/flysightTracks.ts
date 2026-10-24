@@ -89,8 +89,21 @@ const MAX_GAP_MS = 3000;
 /** Going back from the start of freefall, the exit is where the descent rate falls to this. */
 const EXIT_SPEED = 1;
 
+/** Indices into a track's samples. */
+export interface JumpPhases {
+  exit: number;
+  /** End of freefall: the last sample falling faster than FREEFALL_SPEED, when the canopy has (nearly) opened. */
+  deploy: number;
+  /** Touchdown: the first moment standing still near the ground; the lowest point when the track never lands. */
+  landing: number;
+  /** False when the track stops in the air (FlySight switched off under canopy). */
+  landed: boolean;
+  /** hMSL of the lowest point before the next exit (or the end of the track), which altitudes are measured from. */
+  ground: number;
+}
+
 /** Finds the freefalls in a track, in time order. */
-export function detectJumps(samples: TrackSample[]): DetectedJump[] {
+export function findJumpPhases(samples: TrackSample[]): JumpPhases[] {
   if (samples.length === 0) return [];
   const lowest = samples.reduce((min, s) => Math.min(min, s.hMSL), Infinity);
 
@@ -111,17 +124,23 @@ export function detectJumps(samples: TrackSample[]): DetectedJump[] {
     let exit = ff.start;
     while (exit > 0 && samples[exit - 1].velD > EXIT_SPEED) exit--;
     const deploy = ff.end;
-    // The landing is the lowest point before the next exit (or the end of the track).
     const nextExit = freefalls[k + 1]?.start ?? samples.length;
-    let landing = deploy;
-    for (let i = deploy; i < nextExit; i++) if (samples[i].hMSL < samples[landing].hMSL) landing = i;
-    const ground = samples[landing].hMSL;
-    // A track that stops in the air (FlySight switched off under canopy) never stands still near
-    // its lowest point.
-    let landed = false;
-    for (let i = deploy; i < nextExit && !landed; i++) {
-      landed = samples[i].hMSL - ground < 10 && Math.abs(samples[i].velD) < EXIT_SPEED;
+    let bottom = deploy;
+    for (let i = deploy; i < nextExit; i++) if (samples[i].hMSL < samples[bottom].hMSL) bottom = i;
+    const ground = samples[bottom].hMSL;
+    // A track that stops in the air never stands still near its lowest point.
+    let touchdown = -1;
+    for (let i = deploy; i < nextExit && touchdown === -1; i++) {
+      if (samples[i].hMSL - ground < 10 && Math.abs(samples[i].velD) < EXIT_SPEED) touchdown = i;
     }
+    const landed = touchdown !== -1;
+    return { exit, deploy, landing: landed ? touchdown : bottom, landed, ground };
+  });
+}
+
+/** The jumps in a track with their logbook values, in time order. */
+export function detectJumps(samples: TrackSample[]): DetectedJump[] {
+  return findJumpPhases(samples).map(({ exit, deploy, landed, ground }) => {
     const agl = (i: number) => (landed ? Math.round(samples[i].hMSL - ground) : null);
     return {
       exitTime: samples[exit].time,

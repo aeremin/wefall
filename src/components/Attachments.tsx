@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
+import { Link } from 'react-router';
 import { addAttachments, downloadAttachment, removeAttachment } from '../lib/attachments';
 import { ATTACHMENT_TYPE_LABELS } from '../lib/fileTypes';
 import { formatBytes } from '../lib/format';
@@ -6,6 +7,10 @@ import ProTrackChart from './ProTrackChart';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS, type Attachment, type Jump } from '../lib/types';
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+/** FlySight track files; a FlySight 2 session's sensor.csv has no positions to show. */
+const isViewableTrack = (a: Attachment) =>
+  (a.type === 'flysight' || a.type === 'flysight2') && !a.name.toLowerCase().endsWith('sensor.csv');
 
 /** `editable` lets the owner upload and remove files; everyone else can only download. */
 export default function Attachments({ ownerUid, jump, editable }: { ownerUid: string; jump: Jump; editable: boolean }) {
@@ -75,6 +80,12 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
                 </span>
               )}
               <span className="shrink-0 text-xs text-slate-500">{formatBytes(a.size)}</span>
+              {isViewableTrack(a) && (
+                // Relative to the jump's page, so it works for own (/jumps/…) and shared (/shared/…) jumps alike.
+                <Link to={`track/${a.id}`} className="shrink-0 text-xs text-sky-700 hover:underline">
+                  View
+                </Link>
+              )}
               {a.type === 'protrack' && (
                 <button
                   type="button"

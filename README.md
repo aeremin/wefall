@@ -12,6 +12,12 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - Attachments: add files such as FlySight CSVs to a saved jump (up to 20 files of 10 MB each);
   participants can download them from the shared jump page. The file type (ProTrack, FlySight, FlySight 2,
   GPX, KML, image) is detected from the file's content on upload and shown next to it
+- FlySight track viewer: **View** next to a FlySight or FlySight 2 track attachment opens it on a street or
+  satellite map, colored by phase (climb, freefall, opening, canopy), with a side profile, a chart of altitude,
+  speeds, glide ratio, dive angle and GPS accuracy over time (drag across it to zoom in), min/avg/max of the shown
+  section and key numbers for each phase (exit and deployment altitudes, freefall and canopy times, top speeds,
+  opening, landing point). Hovering the map or the chart shows the values at that point on all of them.
+  Logs with several jumps can be viewed one jump at a time
 - FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth: Chrome on Android; Windows
   can't keep a connection with the current FlySight firmware) and
   edit `config.txt` or the selectable configs in `/config` as a form or as text. Selectable configs only
