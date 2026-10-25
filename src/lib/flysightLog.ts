@@ -160,9 +160,26 @@ export interface Track {
   jump: LogJump | null;
   /** hMSL the altitudes are measured from */
   ground: number;
+  /** Where x and y are measured from: the exit (or the first point). */
+  origin: LatLon;
+}
+
+export interface LatLon {
+  lat: number;
+  lon: number;
 }
 
 const EARTH_RADIUS = 6_371_000;
+const RAD = Math.PI / 180;
+
+/** m east and north of `origin`; flat-earth, which is plenty accurate over a jump. */
+export function localXY(origin: LatLon, lat: number, lon: number) {
+  return {
+    x: (lon - origin.lon) * RAD * Math.cos(origin.lat * RAD) * EARTH_RADIUS,
+    y: (lat - origin.lat) * RAD * EARTH_RADIUS,
+  };
+}
+
 /** Glide ratios are only meaningful while descending at least this fast (m/s). */
 const MIN_GLIDE_VS = 1;
 /** Dive angles are only meaningful while moving at least this fast (m/s). */
@@ -181,8 +198,6 @@ export function buildTrack(samples: LogSample[], start: number, end: number, jum
   };
   const origin = slice[rel?.exit ?? 0];
   const ground = rel ? rel.ground : slice.reduce((min, s) => Math.min(min, s.hMSL), Infinity);
-  const rad = Math.PI / 180;
-  const cosLat = Math.cos(origin.lat * rad);
 
   const phaseAt = (i: number): Phase => {
     if (!rel) return 'canopy';
@@ -201,22 +216,21 @@ export function buildTrack(samples: LogSample[], start: number, end: number, jum
       t: (s.time - origin.time) / 1000,
       lat: s.lat,
       lon: s.lon,
-      x: (s.lon - origin.lon) * rad * cosLat * EARTH_RADIUS,
-      y: (s.lat - origin.lat) * rad * EARTH_RADIUS,
+      ...localXY(origin, s.lat, s.lon),
       alt: s.hMSL - ground,
       vs: s.velD,
       hs,
       ts,
       glide: s.velD >= MIN_GLIDE_VS ? hs / s.velD : null,
-      dive: ts >= MIN_DIVE_SPEED ? Math.atan2(s.velD, hs) / rad : null,
-      heading: ((Math.atan2(s.velE, s.velN) / rad) + 360) % 360,
+      dive: ts >= MIN_DIVE_SPEED ? Math.atan2(s.velD, hs) / RAD : null,
+      heading: ((Math.atan2(s.velE, s.velN) / RAD) + 360) % 360,
       hAcc: s.hAcc,
       vAcc: s.vAcc,
       numSV: s.numSV,
       phase: phaseAt(i),
     };
   });
-  return { points, jump: rel, ground };
+  return { points, jump: rel, ground, origin: { lat: origin.lat, lon: origin.lon } };
 }
 
 /** Index of the last point at or before `time` (or the first point). */

@@ -17,6 +17,8 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
   speeds, glide ratio, dive angle and GPS accuracy over time (drag across it to zoom in), min/avg/max of the shown
   section and key numbers for each phase (exit and deployment altitudes, freefall and canopy times, top speeds,
   opening, landing point). Hovering the map or the chart shows the values at that point on all of them.
+  A **3D** view shows the track over the map in perspective; it can be turned, tilted, zoomed and opened
+  fullscreen, and optionally drops lines to the ground every few seconds to make heights easier to read
   Logs with several jumps can be viewed one jump at a time
 - FlySight 2 configurator: connect to a FlySight 2 over Bluetooth (Web Bluetooth: Chrome on Android; Windows
   can't keep a connection with the current FlySight firmware) and

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PHASE_COLORS, type Track } from '../lib/flysightLog';
+import { TILE_LAYERS } from '../lib/mapTiles';
 
 /** How close (px) the pointer must be to the track to pick a point on it. */
 const HOVER_DISTANCE_PX = 24;
@@ -34,16 +35,11 @@ export default function TrackMap({
     // Wheel zoom only after a click on the map, so scrolling the page past it doesn't zoom it.
     const map = L.map(containerRef.current!, { scrollWheelZoom: false });
     map.on('click', () => map.scrollWheelZoom.enable());
-    const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    });
-    const satellite = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },
+    const layers = Object.fromEntries(
+      Object.values(TILE_LAYERS).map((l) => [l.label, L.tileLayer(l.url, { maxZoom: l.maxZoom, attribution: l.attribution })]),
     );
-    street.addTo(map);
-    L.control.layers({ Map: street, Satellite: satellite }).addTo(map);
+    layers[TILE_LAYERS.map.label].addTo(map);
+    L.control.layers(layers).addTo(map);
     L.control.scale().addTo(map);
     trackLayerRef.current = L.layerGroup().addTo(map);
     hoverMarkerRef.current = L.circleMarker([0, 0], {

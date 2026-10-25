@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   buildTrack,
   findLogJumps,
@@ -11,6 +11,7 @@ import {
   type Track,
 } from '../lib/flysightLog';
 import { formatDuration } from '../lib/format';
+import Spinner from './Spinner';
 import TrackMap from './TrackMap';
 import {
   formatT,
@@ -23,6 +24,9 @@ import {
   type Metric,
   type UnitSystem,
 } from './TrackCharts';
+
+// three.js is big, so it is only loaded when the 3D view is opened.
+const Track3D = lazy(() => import('./Track3D'));
 
 type View = 'all' | 'jump' | 'freefall' | 'opening' | 'canopy' | 'landing';
 
@@ -80,6 +84,7 @@ export default function TrackViewer({ samples, logbookTime }: { samples: LogSamp
   const [view, setView] = useState<View>(jumps.length > 0 ? 'jump' : 'all');
   const [zoom, setZoom] = useState<[number, number] | null>(null);
   const [units, setUnits] = useState<UnitSystem>('metric');
+  const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d');
   const [metrics, setMetrics] = useState<Metric[]>(DEFAULT_METRICS);
   const [hover, setHover] = useState<number | null>(null);
   const onHover = useCallback((i: number | null) => setHover(i), []);
@@ -118,6 +123,7 @@ export default function TrackViewer({ samples, logbookTime }: { samples: LogSamp
             onChange={selectJump}
           />
         )}
+        <ToggleGroup label="Map" options={[['2d', 'Map'], ['3d', '3D']]} value={mapMode} onChange={setMapMode} />
         <ToggleGroup label="Units" options={[['metric', 'Metric'], ['imperial', 'Imperial']]} value={units} onChange={setUnits} />
         {zoom && (
           <button type="button" className="cursor-pointer text-sm text-sky-700 hover:underline" onClick={() => setZoom(null)}>
@@ -139,7 +145,13 @@ export default function TrackViewer({ samples, logbookTime }: { samples: LogSamp
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card h-96 p-1 lg:col-span-2 lg:h-[28rem]">
-          <TrackMap track={track} range={range} hover={hover} onHover={onHover} />
+          {mapMode === '2d' ? (
+            <TrackMap track={track} range={range} hover={hover} onHover={onHover} />
+          ) : (
+            <Suspense fallback={<Spinner />}>
+              <Track3D track={track} range={range} hover={hover} onHover={onHover} />
+            </Suspense>
+          )}
         </div>
         <div className="card h-80 lg:h-[28rem]">
           <ProfileChart track={track} range={range} units={units} hover={hover} />
