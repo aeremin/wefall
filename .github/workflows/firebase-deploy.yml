@@ -1,5 +1,5 @@
-# Deploys everything in firebase.json to the wefall project when master changes: the site (Hosting), Firestore
-# rules and indexes, Storage rules, Cloud Functions and the Authentication config. --force lets it delete
+# Deploys to the wefall project when master changes: the site (Hosting), Firestore rules and indexes, Storage
+# rules and Cloud Functions. The Authentication config in firebase.json isn't deployed. --force lets it delete
 # functions that were removed from the source and set the Artifact Registry cleanup policy without asking.
 name: Deploy to Firebase
 on:
@@ -42,4 +42,4 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEFALL }}
       # The functions are linted and built by their predeploy script in firebase.json.
       - name: Deploy
-        run: npx --yes firebase-tools@15 deploy --force --project wefall --non-interactive
+        run: npx --yes firebase-tools@15 deploy --except auth --force --project wefall --non-interactive

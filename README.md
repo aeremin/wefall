@@ -63,8 +63,8 @@ npm run dev
 
 ## Deploying rules and hosting
 
-Merging to `master` deploys everything in `firebase.json` (hosting, Firestore rules and indexes, Storage rules,
-Cloud Functions, the Authentication config) through `.github/workflows/firebase-deploy.yml`; pushes that
+Merging to `master` deploys hosting, Firestore rules and indexes, Storage rules and Cloud Functions
+through `.github/workflows/firebase-deploy.yml` (not the Authentication config in `firebase.json`); pushes that
 only change the Android app, agent skills or Markdown files skip it, and it can be run by hand from the
 Actions tab. Pull requests run `.github/workflows/pull-request.yml`, which builds the site, lints and builds the
 functions and, for branches of this repository, runs `firebase deploy --dry-run` (compiles both rules files,
@@ -76,8 +76,12 @@ Both Firebase workflows sign in with the service account key in the `FIREBASE_SE
 secret. The account `firebase init hosting:github` creates can only deploy hosting; for the rest, give it
 these roles under Google Cloud console → IAM:
 
-- Firebase Admin (`roles/firebase.admin`): rules, indexes, hosting, Authentication config
+- Firebase Rules Admin (`roles/firebaserules.admin`): Firestore and Storage rules. `firebase.json` names the
+  Storage bucket, so the CLI doesn't need to look up the default bucket (which only Firebase Admin and
+  Storage for Firebase roles can)
+- Cloud Datastore Index Admin (`roles/datastore.indexAdmin`): Firestore indexes
 - Cloud Functions Admin (`roles/cloudfunctions.admin`)
+- Cloud Run Admin (`roles/run.admin`): 2nd gen functions run on Cloud Run
 - Service Account User (`roles/iam.serviceAccountUser`): functions run as the default compute service account
 - Artifact Registry Administrator (`roles/artifactregistry.admin`): sets the cleanup policy for function images
 - Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`): checks that the needed APIs are enabled

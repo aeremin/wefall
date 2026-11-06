@@ -64,7 +64,7 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEFALL }}
       # --force as on merge, so removing a function doesn't fail the check.
       - name: Trial deploy
-        run: npx --yes firebase-tools@15 deploy --dry-run --force --project wefall --non-interactive
+        run: npx --yes firebase-tools@15 deploy --except auth --dry-run --force --project wefall --non-interactive
       - name: Deploy the site to a preview channel
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
