@@ -1,0 +1,73 @@
+# Checks a pull request: builds the site, lints and builds the Cloud Functions, then (for branches of this
+# repository, which can use its secrets) runs a trial `firebase deploy` against the wefall project, which
+# compiles the Firestore and Storage rules, checks the indexes and analyzes the functions without changing
+# anything, and deploys the site to a preview channel linked from the pull request.
+name: Check pull request
+on: pull_request
+permissions:
+  contents: read
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix functions
+      - name: Build the site
+        run: npm run build
+      - name: Lint the functions
+        run: npm run lint --prefix functions
+      - name: Build the functions
+        run: npm run build --prefix functions
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  firebase:
+    needs: build
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      # The functions' predeploy script lints and builds them again.
+      - name: Install the functions' dependencies
+        run: npm ci --prefix functions
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEFALL }}
+      # --force as on merge, so removing a function doesn't fail the check.
+      - name: Trial deploy
+        run: npx --yes firebase-tools@15 deploy --dry-run --force --project wefall --non-interactive
+      - name: Deploy the site to a preview channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEFALL }}
+          projectId: wefall

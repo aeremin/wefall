@@ -45,7 +45,10 @@
       }
     }
   },
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "bucket": "wefall.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }

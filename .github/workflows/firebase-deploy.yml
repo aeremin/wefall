@@ -1,0 +1,45 @@
+# Deploys everything in firebase.json to the wefall project when master changes: the site (Hosting), Firestore
+# rules and indexes, Storage rules, Cloud Functions and the Authentication config. --force lets it delete
+# functions that were removed from the source and set the Artifact Registry cleanup policy without asking.
+name: Deploy to Firebase
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'android/**'
+      - '.agents/**'
+      - '.claude/**'
+      - '.cursor/**'
+      - '.github/workflows/android-*.yml'
+      - '**.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix functions
+      - name: Build the site
+        run: npm run build
+      - uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEFALL }}
+      # The functions are linted and built by their predeploy script in firebase.json.
+      - name: Deploy
+        run: npx --yes firebase-tools@15 deploy --force --project wefall --non-interactive
