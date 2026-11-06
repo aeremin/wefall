@@ -63,6 +63,27 @@ npm run dev
 
 ## Deploying rules and hosting
 
+Merging to `master` deploys everything in `firebase.json` (hosting, Firestore rules and indexes, Storage rules,
+Cloud Functions, the Authentication config) through `.github/workflows/firebase-deploy.yml`; pushes that
+only change the Android app, agent skills or Markdown files skip it, and it can be run by hand from the
+Actions tab. Pull requests run `.github/workflows/pull-request.yml`, which builds the site, lints and builds the
+functions and, for branches of this repository, runs `firebase deploy --dry-run` (compiles both rules files,
+checks the indexes and analyzes the functions without changing anything) and deploys the site to a preview
+channel linked from the pull request. Pull requests that change `android/` also build the app and run its lint
+(`.github/workflows/android-check.yml`).
+
+Both Firebase workflows sign in with the service account key in the `FIREBASE_SERVICE_ACCOUNT_WEFALL`
+secret. The account `firebase init hosting:github` creates can only deploy hosting; for the rest, give it
+these roles under Google Cloud console → IAM:
+
+- Firebase Admin (`roles/firebase.admin`): rules, indexes, hosting, Authentication config
+- Cloud Functions Admin (`roles/cloudfunctions.admin`)
+- Service Account User (`roles/iam.serviceAccountUser`): functions run as the default compute service account
+- Artifact Registry Administrator (`roles/artifactregistry.admin`): sets the cleanup policy for function images
+- Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`): checks that the needed APIs are enabled
+
+To deploy by hand:
+
 ```sh
 npm install -g firebase-tools
 firebase login
