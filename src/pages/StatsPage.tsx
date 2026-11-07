@@ -120,9 +120,9 @@ export default function StatsPage() {
           value={stats.thisYear.toLocaleString()} 
           sub={
             <>
-              {stats.last90Days.toLocaleString()} in last 90 days
-              <br />
               {stats.last12Months.toLocaleString()} in last 12 months
+              <br />
+              {stats.last90Days.toLocaleString()} in last 90 days
             </>
           }
         />
