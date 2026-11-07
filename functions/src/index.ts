@@ -3,8 +3,10 @@ import {
   onDocumentDeleted,
   onDocumentWritten,
 } from "firebase-functions/firestore";
+import {HttpsError, onCall} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
 import {initializeApp} from "firebase-admin/app";
+import {getAuth} from "firebase-admin/auth";
 import {getStorage} from "firebase-admin/storage";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
 
@@ -81,3 +83,80 @@ export const syncPublicJump = onDocumentWritten(
     });
   },
 );
+
+/**
+ * Roles kept in users' `roles` custom claim. Keep in sync with
+ * src/lib/roles.ts and scripts/set-roles.mjs.
+ */
+const ROLES = ["admin", "beta"] as const;
+type Role = typeof ROLES[number];
+
+const isRole = (value: unknown): value is Role =>
+  typeof value === "string" && (ROLES as readonly string[]).includes(value);
+
+/**
+ * Finds the user by the `email` in a callable's data.
+ * @param {unknown} data The callable's data.
+ * @return {Promise<UserRecord>} The user.
+ */
+async function userByEmail(data: unknown) {
+  const email = (data as {email?: unknown} | null)?.email;
+  if (typeof email !== "string" || !email.trim()) {
+    throw new HttpsError("invalid-argument", "Give the user's email.");
+  }
+  try {
+    return await getAuth().getUserByEmail(email.trim());
+  } catch (e) {
+    if ((e as {code?: string}).code === "auth/user-not-found") {
+      throw new HttpsError("not-found", `No user signed up as ${email}.`);
+    }
+    throw e;
+  }
+}
+
+/**
+ * Only admins (see scripts/set-roles.mjs for the first one) may manage roles.
+ * @param {object | undefined} auth The callable's auth context.
+ */
+function requireAdmin(auth: {token: Record<string, unknown>} | undefined) {
+  const roles = auth?.token.roles;
+  if (!Array.isArray(roles) || !roles.includes("admin")) {
+    throw new HttpsError("permission-denied", "Only admins can manage roles.");
+  }
+}
+
+const rolesOf = (claims: Record<string, unknown> | undefined): Role[] =>
+  Array.isArray(claims?.roles) ? claims.roles.filter(isRole) : [];
+
+/** Returns the roles of the user with the given `email`. */
+export const getUserRoles = onCall(async (request) => {
+  requireAdmin(request.auth);
+  const user = await userByEmail(request.data);
+  return {uid: user.uid, email: user.email, roles: rolesOf(user.customClaims)};
+});
+
+/**
+ * Sets the roles of the user with the given `email`. They apply once the
+ * user's ID token is refreshed: within an hour, or on their next sign-in.
+ */
+export const setUserRoles = onCall(async (request) => {
+  requireAdmin(request.auth);
+  const raw = (request.data as {roles?: unknown} | null)?.roles;
+  if (!Array.isArray(raw) || !raw.every(isRole)) {
+    throw new HttpsError(
+      "invalid-argument", `Roles must be a list of: ${ROLES.join(", ")}.`,
+    );
+  }
+  const roles = [...new Set(raw)];
+  const user = await userByEmail(request.data);
+  if (user.uid === request.auth?.uid && !roles.includes("admin")) {
+    throw new HttpsError(
+      "failed-precondition", "You can't remove your own admin role.",
+    );
+  }
+  await getAuth().setCustomUserClaims(user.uid, {...user.customClaims, roles});
+  logger.info("Set user roles", {
+    uid: user.uid, roles, by: request.auth?.uid,
+  });
+  return {uid: user.uid, email: user.email, roles};
+});
