@@ -39,6 +39,9 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
   even without a logbook of their own
+- Public links: **Create link** on a jump gives a link (`/link/{token}`) that anyone can open without
+  signing in, showing the jump, its notes and attachments (track viewer included) but not participants' emails.
+  **Stop sharing** turns it off; creating it again gives a new link, so the old one stays dead
 - Jump links use the jump number, e.g. `/jumps/700` or `/shared/{ownerUid}/700`; jumps with a
   duplicated number fall back to their id, and id-based links keep working
 - Works offline: jumps logged without reception sync when you're back online
@@ -182,8 +185,16 @@ users/{uid}/jumps/{jumpId}
   exitAltitude (m), deploymentAltitude (m), freefallTime (s),
   canopy, notes, createdAt, updatedAt,
   participants (lowercased emails that may view the jump), ownerName (shown to participants),
+  linkToken (secret of the public link; absent when the jump isn't shared by link),
   attachments: [{ id, name, size (bytes), contentType, uploadedAt (ISO),
     type (protrack | flysight | flysight2 | gpx | kml | image | other; absent on older uploads) }]
+
+publicJumps/{linkToken}
+  ownerUid, jumpId, updatedAt, and the jump's fields except participants and linkToken
 ```
 
 Attachment files are stored in Cloud Storage at `users/{uid}/jumps/{jumpId}/{attachmentId}`.
+`publicJumps` is written only by the `syncPublicJump` Cloud Function, which copies a jump there while it
+has a `linkToken` and deletes the copy when the link is turned off or replaced or the jump is deleted.
+Anyone can `get` a copy by its token, but not list them; Storage lets anyone download the attachments of a
+jump that has a `linkToken`.

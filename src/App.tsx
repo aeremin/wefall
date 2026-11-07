@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { JumpsProvider } from './context/JumpsContext';
 import Layout from './components/Layout';
+import PublicLayout from './components/PublicLayout';
 import Spinner from './components/Spinner';
 import LoginPage from './pages/LoginPage';
 import JumpsPage from './pages/JumpsPage';
@@ -10,6 +11,7 @@ import JumpFormPage from './pages/JumpFormPage';
 import ImportPage from './pages/ImportPage';
 import SharedJumpPage from './pages/SharedJumpPage';
 import SharedWithMePage from './pages/SharedWithMePage';
+import PublicJumpPage from './pages/PublicJumpPage';
 
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const FlySightPage = lazy(() => import('./pages/FlySightPage'));
@@ -33,6 +35,17 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route element={<PublicLayout />}>
+          <Route path="link/:token" element={<PublicJumpPage />} />
+          <Route
+            path="link/:token/track/:attachmentId"
+            element={
+              <Suspense fallback={<Spinner />}>
+                <TrackPage />
+              </Suspense>
+            }
+          />
+        </Route>
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>
             <Route index element={<JumpsPage />} />
