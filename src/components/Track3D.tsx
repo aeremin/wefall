@@ -5,6 +5,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { localXY, PHASE_COLORS, type Track, type TrackPoint } from '../lib/flysightLog';
+import { useVisibleArea } from '../lib/useVisibleArea';
 import { TILE_LAYERS, tileAt, tileCorner, tileUrl, type TileLayer } from '../lib/mapTiles';
 
 /** How close (px) the pointer must be to the track to pick a point on it. */
@@ -95,6 +96,7 @@ export default function Track3D({
   const [projection, setProjection] = useState(true);
   const [dropInterval, setDropInterval] = useState(5);
   const [fullscreen, setFullscreen] = useState(false);
+  const visibleArea = useVisibleArea(fullscreen);
   const [error, setError] = useState<string | null>(null);
   // Read by the canvas's event handlers, which are only attached once.
   const latest = useRef({ track, range, onHover });
@@ -376,7 +378,10 @@ export default function Track3D({
   if (error) return <p className="p-4 text-sm text-slate-500">{error}</p>;
 
   return (
-    <div className={`overflow-hidden bg-slate-200 ${fullscreen ? 'fixed inset-0 z-50' : 'relative h-full min-h-72 w-full rounded-lg'}`}>
+    <div
+      className={`overflow-hidden bg-slate-200 ${fullscreen ? 'fixed inset-0 z-50' : 'relative h-full min-h-72 w-full rounded-lg'}`}
+      style={fullscreen ? visibleArea : undefined}
+    >
       <div ref={containerRef} className="absolute inset-0" />
       <button
         type="button"

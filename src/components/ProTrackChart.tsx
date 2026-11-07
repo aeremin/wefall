@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useVisibleArea } from '../lib/useVisibleArea';
 import {
   Brush,
   CartesianGrid,
@@ -121,10 +122,11 @@ function FullscreenPlot({
     };
   }, [onClose]);
 
+  const visibleArea = useVisibleArea(true);
   const set = <K extends keyof PlotSettings>(key: K, value: PlotSettings[K]) => onChange({ ...settings, [key]: value });
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 flex flex-col gap-3 bg-white p-4">
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 flex flex-col gap-3 bg-white p-4" style={visibleArea}>
       <div className="flex items-center gap-3">
         <h2 className="min-w-0 truncate font-semibold">{title}</h2>
         <button type="button" className="btn btn-secondary ml-auto shrink-0" onClick={onClose}>
