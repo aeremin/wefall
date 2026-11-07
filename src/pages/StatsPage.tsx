@@ -35,6 +35,10 @@ function computeStats(jumps: Jump[]) {
   const totalFreefall = freefallJumps.reduce((sum, j) => sum + j.freefallTime!, 0);
   const lastJump = jumps.reduce<Jump | undefined>((latest, j) => (!latest || j.date > latest.date ? j : latest), undefined);
   const currentYear = String(new Date().getFullYear());
+  const now = new Date();
+  const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yearAgoIso = `${yearAgo.getFullYear()}-${pad(yearAgo.getMonth() + 1)}-${pad(yearAgo.getDate())}`;
   const exits = jumps.map((j) => j.exitAltitude).filter((a): a is number => a != null);
 
   const byYear = countBy(jumps, (j) => j.date.slice(0, 4))
@@ -53,6 +57,7 @@ function computeStats(jumps: Jump[]) {
     lastJump,
     thisYear: jumps.filter((j) => j.date.startsWith(currentYear)).length,
     last90Days: jumps.filter((j) => daysSince(j.date) <= 90).length,
+    last12Months: jumps.filter((j) => j.date >= yearAgoIso).length,
     highestExit: exits.length ? Math.max(...exits) : null,
     byYear,
     typeData,
@@ -110,7 +115,17 @@ export default function StatsPage() {
           sub={stats.lastJump ? formatDate(stats.lastJump.date) : undefined}
           warn={since != null && since > 90}
         />
-        <StatCard label="This year" value={stats.thisYear.toLocaleString()} sub={`${stats.last90Days} in last 90 days`} />
+        <StatCard
+          label="This year"
+          value={stats.thisYear.toLocaleString()} 
+          sub={
+            <>
+              {stats.last90Days.toLocaleString()} in last 90 days
+              <br />
+              {stats.last12Months.toLocaleString()} in last 12 months
+            </>
+          }
+        />
         <StatCard label="Avg freefall" value={stats.avgFreefall == null ? '–' : `${Math.round(stats.avgFreefall)}s`} />
         <StatCard label="Highest exit" value={formatAltitude(stats.highestExit)} />
         <StatCard label="Dropzones" value={String(new Set(jumps.map((j) => j.dropzone).filter(Boolean)).size)} />
@@ -189,7 +204,7 @@ export default function StatsPage() {
   );
 }
 
-function StatCard({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: boolean }) {
+function StatCard({ label, value, sub, warn }: { label: string; value: string; sub?: ReactNode; warn?: boolean }) {
   return (
     <div className="card">
       <p className="text-xs font-medium uppercase text-slate-500">{label}</p>
