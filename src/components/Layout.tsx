@@ -1,19 +1,22 @@
 import { NavLink, Outlet } from 'react-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { useCurrentUser } from '../context/AuthContext';
+import { useCurrentUser, useRoles } from '../context/AuthContext';
+import { hasAnyRole, type Role } from '../lib/roles';
 
-const navItems = [
+const navItems: { to: string; label: string; end: boolean; roles?: Role[] }[] = [
   { to: '/', label: 'Logbook', end: true },
   { to: '/stats', label: 'Stats', end: false },
   { to: '/import', label: 'Import', end: false },
   { to: '/shared', label: 'Shared', end: false },
   { to: '/flysight', label: 'FlySight', end: false },
-  // The Bluetooth explorer (/bluetooth) is a debugging tool: still routed, but not linked here.
+  { to: '/bluetooth', label: 'Bluetooth', end: false, roles: ['beta'] },
+  { to: '/admin', label: 'Admin', end: false, roles: ['admin'] },
 ];
 
 export default function Layout() {
   const user = useCurrentUser();
+  const roles = useRoles();
 
   return (
     <div className="min-h-screen">
@@ -24,7 +27,7 @@ export default function Layout() {
             WeFall
           </NavLink>
           <nav className="flex gap-1">
-            {navItems.map((item) => (
+            {navItems.filter((item) => hasAnyRole(roles, item.roles)).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth, useRoles } from './context/AuthContext';
+import { hasAnyRole, type Role } from './lib/roles';
 import { JumpsProvider } from './context/JumpsContext';
 import Layout from './components/Layout';
 import PublicLayout from './components/PublicLayout';
@@ -16,6 +17,7 @@ import PublicJumpPage from './pages/PublicJumpPage';
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const FlySightPage = lazy(() => import('./pages/FlySightPage'));
 const BluetoothExplorerPage = lazy(() => import('./pages/BluetoothExplorerPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TrackPage = lazy(() => import('./pages/TrackPage'));
 
 function RequireAuth() {
@@ -28,6 +30,12 @@ function RequireAuth() {
       <Outlet />
     </JumpsProvider>
   );
+}
+
+/** Sends users without one of `roles` (admins always have access) back to the logbook. */
+function RequireRole({ roles }: { roles: Role[] }) {
+  const userRoles = useRoles();
+  return hasAnyRole(userRoles, roles) ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 export default function App() {
@@ -76,14 +84,26 @@ export default function App() {
                 </Suspense>
               }
             />
-            <Route
-              path="bluetooth"
-              element={
-                <Suspense fallback={<Spinner />}>
-                  <BluetoothExplorerPage />
-                </Suspense>
-              }
-            />
+            <Route element={<RequireRole roles={['beta']} />}>
+              <Route
+                path="bluetooth"
+                element={
+                  <Suspense fallback={<Spinner />}>
+                    <BluetoothExplorerPage />
+                  </Suspense>
+                }
+              />
+            </Route>
+            <Route element={<RequireRole roles={['admin']} />}>
+              <Route
+                path="admin"
+                element={
+                  <Suspense fallback={<Spinner />}>
+                    <AdminPage />
+                  </Suspense>
+                }
+              />
+            </Route>
             <Route path="shared" element={<SharedWithMePage />} />
             <Route path="shared/:ownerUid/:jumpId" element={<SharedJumpPage />} />
             <Route

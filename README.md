@@ -27,7 +27,7 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
   Its **Tracks** tab finds the exits in each recorded session's `track.csv`, suggests the logbook jump for each
   (by time, or by order on days without jump times), and attaches the session's `track.csv` and `sensor.csv`
   to it, named after the session (e.g. `26-10-22_10-15-30_track.csv`) so attached sessions are skipped next time
-- Bluetooth explorer (`/bluetooth`): connect to any Bluetooth LE device, list its services, characteristics
+- Bluetooth explorer (`/bluetooth`, beta testers and admins only): connect to any Bluetooth LE device, list its services, characteristics
   and descriptors, read, write and subscribe to characteristics, and copy a timestamped log, for working out
   undocumented protocols such as the AON2 X2's. Custom services must be added by UUID, since browsers only
   expose the services they're told about
@@ -35,6 +35,7 @@ A multi-user skydiving logbook built with React, TypeScript, Vite, Tailwind CSS 
   opens by itself, reads the device and opens WeFall in the browser with its data: ProTrack jumps on the
   import page, FlySight 2 sessions on the FlySight page's Tracks tab (which finds their jumps right away).
   See [Android app](#android-app)
+- Roles: admins and beta testers see extra tools (see [Roles](#roles)); everyone else doesn't
 - Each user only sees their own jumps (enforced by Firestore security rules)
 - Jump sharing: add participants to a jump by email; they can open it via its direct link
   (`/shared/{ownerUid}/{jumpId}`) after signing in with Google, and see it under **Shared**,
@@ -112,6 +113,27 @@ gcloud storage buckets update gs://wefall.firebasestorage.app --cors-file=cors.j
 ```
 The **Shared** page needs the collection-group index on `participants` from `firestore.indexes.json`.
 When deploying to a custom domain, add it under Authentication → Settings → Authorized domains.
+
+## Roles
+
+Roles live in each user's `roles` custom claim in Firebase Auth, so users can't give them to themselves:
+
+- `beta`: sees unfinished and debugging tools (the Bluetooth explorer)
+- `admin`: sees everything `beta` does, plus the **Admin** page, where they look up a user by email and set
+  their roles (through the `getUserRoles` and `setUserRoles` Cloud Functions, which only admins may call)
+
+Menu items and routes take a `roles` list (`src/components/Layout.tsx`, `RequireRole` in `src/App.tsx`).
+Pages are only hidden: their code ships to everyone, so anything secret must also be checked in security rules
+(`request.auth.token.roles`) or Cloud Functions. A user gets new roles when their ID token refreshes, within an
+hour or on their next sign-in.
+
+Make the first admin with the Admin SDK, using Application Default Credentials for the project:
+
+```sh
+gcloud auth application-default login
+cd functions && npm install
+node scripts/set-roles.mjs someone@example.com admin   # or: beta, several roles, --none; no roles shows them
+```
 
 ## Android app
 

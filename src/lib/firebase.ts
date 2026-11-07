@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-const app = initializeApp({
+export const app = initializeApp({
   apiKey: 'AIzaSyD-ogo4QlCC-cT57SPTaA0Qo2LE7Xqg6_I',
   authDomain: 'wefall.firebaseapp.com',
   projectId: 'wefall',
