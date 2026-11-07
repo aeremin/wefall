@@ -9,7 +9,7 @@ const navItems = [
   { to: '/import', label: 'Import', end: false },
   { to: '/shared', label: 'Shared', end: false },
   { to: '/flysight', label: 'FlySight', end: false },
-  { to: '/bluetooth', label: 'Bluetooth', end: false },
+  // The Bluetooth explorer (/bluetooth) is a debugging tool: still routed, but not linked here.
 ];
 
 export default function Layout() {
