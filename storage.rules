@@ -17,7 +17,13 @@ service firebase.storage {
               /databases/(default)/documents/users/$(userId)/jumps/$(jumpId)).data.get('participants', []);
       }
 
-      allow get: if isOwner() || isParticipant();
+      // Anyone, signed in or not, while the jump is shared by public link.
+      function hasPublicLink() {
+        return firestore.get(
+            /databases/(default)/documents/users/$(userId)/jumps/$(jumpId)).data.get('linkToken', null) != null;
+      }
+
+      allow get: if isOwner() || isParticipant() || hasPublicLink();
       allow delete: if isOwner();
       // Keep in sync with MAX_ATTACHMENT_BYTES in src/lib/types.ts.
       allow create, update: if isOwner() && request.resource.size <= 10 * 1024 * 1024;

@@ -47,6 +47,8 @@ export interface Jump extends JumpInput {
   /** Lowercased emails of people who may view this jump via its direct link. */
   participants: string[];
   attachments: Attachment[];
+  /** Secret part of the jump's public link (`/link/{linkToken}`); absent when it isn't shared by link. */
+  linkToken?: string;
 }
 
 export interface JumpSharing {

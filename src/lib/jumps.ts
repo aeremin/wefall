@@ -2,6 +2,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  deleteField,
   doc,
   limit,
   onSnapshot,
@@ -162,6 +163,52 @@ export function jumpRef(jump: Jump, others: Jump[]) {
 
 export function sharedJumpUrl(ownerUid: string, jumpRef: string) {
   return `${window.location.origin}/shared/${ownerUid}/${jumpRef}`;
+}
+
+/** Opens the jump shared by public link `token`; emits null when there is no such link (any more). */
+export function subscribePublicJump(
+  token: string,
+  onData: (jump: SharedJump | null) => void,
+  onError: (error: Error) => void,
+) {
+  return onSnapshot(
+    doc(db, 'publicJumps', token),
+    (d) => {
+      if (!d.exists()) return onData(null);
+      const { ownerUid, jumpId, ...data } = d.data() as JumpInput & { ownerUid: string; jumpId: string };
+      onData({
+        ...data,
+        time: d.get('time') ?? '',
+        attachments: d.get('attachments') ?? [],
+        participants: [],
+        ownerName: d.get('ownerName') ?? '',
+        ownerUid,
+        id: jumpId,
+      });
+    },
+    onError,
+  );
+}
+
+/** 128 random bits, base64url-encoded (22 characters). */
+function newLinkToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function publicJumpUrl(token: string) {
+  return `${window.location.origin}/link/${token}`;
+}
+
+/**
+ * Turns the jump's public link on (with a new token, so an earlier link stays dead) or off. The
+ * syncPublicJump Cloud Function publishes the copy that the link opens, within a few seconds.
+ */
+export function setPublicLink(uid: string, id: string, enabled: boolean) {
+  return updateDoc(doc(jumpsCollection(uid), id), {
+    linkToken: enabled ? newLinkToken() : deleteField(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export function addJump(uid: string, jump: JumpInput & Partial<JumpSharing>) {

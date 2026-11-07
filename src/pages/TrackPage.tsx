@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { useCurrentUser } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { downloadAttachment, fetchAttachmentText } from '../lib/attachments';
 import { parseFlySightLog, type LogSample } from '../lib/flysightLog';
 import { formatDate } from '../lib/format';
-import { subscribeSharedJump } from '../lib/jumps';
+import { subscribePublicJump, subscribeSharedJump } from '../lib/jumps';
 import type { SharedJump } from '../lib/types';
 import Spinner from '../components/Spinner';
 import TrackViewer from '../components/TrackViewer';
@@ -12,16 +12,23 @@ import TrackViewer from '../components/TrackViewer';
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 /**
- * A FlySight attachment on the map and in charts. Serves both `/jumps/:id/track/:attachmentId` for
- * the user's own jumps and `/shared/:ownerUid/:jumpId/track/:attachmentId` for shared ones.
+ * A FlySight attachment on the map and in charts. Serves `/jumps/:id/track/:attachmentId` for the
+ * user's own jumps, `/shared/:ownerUid/:jumpId/track/:attachmentId` for jumps shared with them and
+ * `/link/:token/track/:attachmentId` for jumps shared by public link, which needs no sign-in.
  */
 export default function TrackPage() {
   const params = useParams();
-  const user = useCurrentUser();
-  const ownerUid = params.ownerUid ?? user.uid;
-  const jumpParam = (params.jumpId ?? params.id)!;
+  const { user } = useAuth();
+  const token = params.token;
+  // Only routes behind RequireAuth leave out the token, so there is a user whenever it's needed.
+  const ownerUid = params.ownerUid ?? user?.uid ?? '';
+  const jumpParam = params.jumpId ?? params.id ?? '';
   const attachmentId = params.attachmentId!;
-  const backTo = params.ownerUid ? `/shared/${ownerUid}/${jumpParam}` : `/jumps/${jumpParam}`;
+  const backTo = token
+    ? `/link/${token}`
+    : params.ownerUid
+      ? `/shared/${ownerUid}/${jumpParam}`
+      : `/jumps/${jumpParam}`;
 
   const [jump, setJump] = useState<SharedJump | null | undefined>(undefined);
   const [samples, setSamples] = useState<LogSample[] | null>(null);
@@ -29,14 +36,15 @@ export default function TrackPage() {
 
   useEffect(() => {
     setJump(undefined);
+    if (token) return subscribePublicJump(token, setJump, (err) => setError(err.message));
     return subscribeSharedJump(
       ownerUid,
       jumpParam,
-      { uid: user.uid, email: user.email },
+      { uid: user!.uid, email: user!.email },
       (j) => setJump(j),
       (err) => setError(err.message),
     );
-  }, [ownerUid, jumpParam, user.uid, user.email]);
+  }, [token, ownerUid, jumpParam, user?.uid, user?.email]);
 
   const attachment = jump?.attachments.find((a) => a.id === attachmentId);
 
@@ -45,7 +53,7 @@ export default function TrackPage() {
     let cancelled = false;
     setSamples(null);
     setError(null);
-    fetchAttachmentText(ownerUid, jump.id, attachment)
+    fetchAttachmentText(jump.ownerUid, jump.id, attachment)
       .then((text) => {
         if (cancelled) return;
         const parsed = parseFlySightLog(text);
@@ -57,15 +65,15 @@ export default function TrackPage() {
       cancelled = true;
     };
     // Refetched only when the attachment itself changes, not on every update to the jump.
-  }, [ownerUid, jump?.id, attachment?.id]);
+  }, [jump?.ownerUid, jump?.id, attachment?.id]);
 
   if (jump === undefined && !error) return <Spinner />;
   if (!jump || !attachment) {
     return (
       <div className="card mx-auto max-w-lg space-y-2 py-8 text-center">
         <p className="text-lg font-medium">{error ? `Could not load the jump: ${error}` : jump ? 'File not found' : 'Jump not found'}</p>
-        <Link to={jump ? backTo : '/'} className="inline-block text-sm text-sky-700 hover:underline">
-          {jump ? 'Back to the jump' : 'Back to logbook'}
+        <Link to={jump || token ? backTo : '/'} className="inline-block text-sm text-sky-700 hover:underline">
+          {jump || token ? 'Back to the jump' : 'Back to logbook'}
         </Link>
       </div>
     );
@@ -81,14 +89,14 @@ export default function TrackPage() {
           <p className="truncate text-sm text-slate-500">
             {attachment.name}
             {jump.dropzone && ` · ${jump.dropzone}`}
-            {jump.ownerUid !== user.uid && ` · shared by ${jump.ownerName || 'another jumper'}`}
+            {jump.ownerUid !== user?.uid && ` · shared by ${jump.ownerName || 'another jumper'}`}
           </p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => downloadAttachment(ownerUid, jump.id, attachment).catch((err) => setError(message(err)))}
+            onClick={() => downloadAttachment(jump.ownerUid, jump.id, attachment).catch((err) => setError(message(err)))}
           >
             Download
           </button>

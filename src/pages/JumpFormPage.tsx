@@ -2,7 +2,17 @@ import { useMemo, useState, type FormEvent, type KeyboardEvent, type ReactNode }
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useCurrentUser } from '../context/AuthContext';
 import { useJumps } from '../context/JumpsContext';
-import { addJump, deleteJump, jumpRef, normalizeEmail, parseJumpNumber, sharedJumpUrl, updateJump } from '../lib/jumps';
+import {
+  addJump,
+  deleteJump,
+  jumpRef,
+  normalizeEmail,
+  parseJumpNumber,
+  publicJumpUrl,
+  setPublicLink,
+  sharedJumpUrl,
+  updateJump,
+} from '../lib/jumps';
 import { parseTime, todayIso } from '../lib/format';
 import { JUMP_TYPES, type Jump, type JumpInput } from '../lib/types';
 import Spinner from '../components/Spinner';
@@ -105,7 +115,7 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
   const [participants, setParticipants] = useState(jump?.participants ?? []);
   const [participantInput, setParticipantInput] = useState('');
   const [participantError, setParticipantError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'participants' | 'public' | null>(null);
 
   const suggestions = useMemo(() => {
     const unique = (key: 'dropzone' | 'aircraft' | 'canopy') =>
@@ -148,15 +158,23 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
     addParticipant();
   }
 
-  function copyShareLink() {
-    if (!jump) return;
-    navigator.clipboard.writeText(sharedJumpUrl(user.uid, jumpRef(jump, jumps))).then(
+  function copyLink(which: 'participants' | 'public', url: string) {
+    navigator.clipboard.writeText(url).then(
       () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setCopied(which);
+        setTimeout(() => setCopied(null), 2000);
       },
       () => alert('Could not copy the link.'),
     );
+  }
+
+  function togglePublicLink(enabled: boolean) {
+    if (!jump) return;
+    if (!enabled && !confirm('Stop sharing this jump by link? The link will stop working for everyone who has it.')) {
+      return;
+    }
+    // Not awaited, like saves: the change applies locally right away and syncs when back online.
+    setPublicLink(user.uid, jump.id, enabled).catch((err: Error) => alert(`Could not change the link: ${err.message}`));
   }
 
   function save(addAnother: boolean) {
@@ -285,8 +303,12 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
         {jump && (
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
             <input readOnly className="input flex-1 text-slate-500" aria-label="Share link" value={sharedJumpUrl(user.uid, jumpRef(jump, jumps))} onFocus={(e) => e.target.select()} />
-            <button type="button" className="btn btn-secondary" onClick={copyShareLink}>
-              {copied ? 'Copied!' : 'Copy link'}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => copyLink('participants', sharedJumpUrl(user.uid, jumpRef(jump, jumps)))}
+            >
+              {copied === 'participants' ? 'Copied!' : 'Copy link'}
             </button>
           </div>
         )}
@@ -294,6 +316,43 @@ function JumpForm({ jump, initial }: { jump?: Jump; initial: FormValues }) {
           <p className="text-xs text-slate-500">The share link becomes available after saving.</p>
         )}
       </div>
+
+      {jump && (
+        <div className="card space-y-3">
+          <div>
+            <h2 className="font-semibold">Public link</h2>
+            <p className="text-sm text-slate-500">
+              Anyone with the link can view this jump, its notes and its attachments without signing in.
+              Participants' emails aren't shown.
+            </p>
+          </div>
+          {jump.linkToken ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                readOnly
+                className="input flex-1 text-slate-500"
+                aria-label="Public link"
+                value={publicJumpUrl(jump.linkToken)}
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => copyLink('public', publicJumpUrl(jump.linkToken!))}
+              >
+                {copied === 'public' ? 'Copied!' : 'Copy link'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => togglePublicLink(false)}>
+                Stop sharing
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn-secondary" onClick={() => togglePublicLink(true)}>
+              Create link
+            </button>
+          )}
+        </div>
+      )}
 
       {jump ? (
         <Attachments ownerUid={user.uid} jump={jump} editable />

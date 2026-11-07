@@ -56,7 +56,9 @@ export default function Attachments({ ownerUid, jump, editable }: { ownerUid: st
         {editable && (
           <p className="text-sm text-slate-500">
             Files such as ProTrack or FlySight logs, up to {formatBytes(MAX_ATTACHMENT_BYTES)} each.
-            Participants can download them too.
+            {jump.linkToken
+              ? 'Participants and anyone with the public link can download them too.'
+              : 'Participants can download them too.'}
           </p>
         )}
       </div>
